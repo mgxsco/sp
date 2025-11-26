@@ -53,6 +53,30 @@ VITE_PINATA_SECRET_KEY=your_pinata_secret_key
 npm run dev
 ```
 
+## Deploy to Vercel
+
+### One-Click Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/YOUR_REPO)
+
+### Manual Deploy
+
+1. Push your code to GitHub
+
+2. Go to [vercel.com](https://vercel.com) and sign in
+
+3. Click "New Project" and import your repository
+
+4. Configure Environment Variables in Vercel dashboard:
+   - `VITE_WALLET_CONNECT_PROJECT_ID` - Your WalletConnect project ID
+   - `VITE_NFT_CONTRACT_ADDRESS` - Your deployed NFT contract address
+   - `VITE_PINATA_API_KEY` - Pinata API key (optional)
+   - `VITE_PINATA_SECRET_KEY` - Pinata secret key (optional)
+
+5. Click "Deploy"
+
+Vercel will automatically detect Vite and configure the build settings.
+
 ## Smart Contract
 
 The project includes a reference ERC-721 smart contract in `src/contracts/NFTContract.ts`. To deploy:
