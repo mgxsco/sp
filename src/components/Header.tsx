@@ -2,9 +2,14 @@ import { ConnectButton } from '@rainbow-me/rainbowkit'
 
 export function Header() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-b border-gray-900">
-      <div className="max-w-5xl mx-auto px-6 md:px-8 py-4 flex items-center justify-between">
-        <a href="https://www.mgxs.co" target="_blank" rel="noopener noreferrer" className="text-white font-medium tracking-widest text-sm hover:opacity-70 transition-opacity">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/5">
+      <div className="max-w-[1440px] mx-auto px-[6vw] md:px-[4vw] py-5 flex items-center justify-between">
+        <a
+          href="https://www.mgxs.co"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-tomorrow text-white text-sm tracking-[0.3em] uppercase hover:opacity-60 transition-opacity duration-300"
+        >
           MGXS
         </a>
 
@@ -36,9 +41,9 @@ export function Header() {
                     return (
                       <button
                         onClick={openConnectModal}
-                        className="text-xs tracking-wider text-gray-400 hover:text-white transition-colors uppercase"
+                        className="font-tomorrow text-[10px] tracking-[0.2em] text-white/50 hover:text-white transition-colors duration-300 uppercase"
                       >
-                        Connect
+                        Connect Wallet
                       </button>
                     )
                   }
@@ -47,7 +52,7 @@ export function Header() {
                     return (
                       <button
                         onClick={openChainModal}
-                        className="text-xs tracking-wider text-red-400 hover:text-red-300 transition-colors uppercase"
+                        className="font-tomorrow text-[10px] tracking-[0.2em] text-red-400 hover:text-red-300 transition-colors duration-300 uppercase"
                       >
                         Wrong Network
                       </button>
@@ -55,16 +60,16 @@ export function Header() {
                   }
 
                   return (
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
                       <button
                         onClick={openChainModal}
-                        className="text-xs tracking-wider text-gray-500 hover:text-white transition-colors uppercase"
+                        className="font-tomorrow text-[10px] tracking-[0.2em] text-white/30 hover:text-white transition-colors duration-300 uppercase"
                       >
                         {chain.name}
                       </button>
                       <button
                         onClick={openAccountModal}
-                        className="text-xs tracking-wider text-gray-400 hover:text-white transition-colors"
+                        className="font-tomorrow text-[10px] tracking-[0.2em] text-white/50 hover:text-white transition-colors duration-300"
                       >
                         {account.displayName}
                       </button>

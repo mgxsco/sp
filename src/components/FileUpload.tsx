@@ -32,7 +32,7 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
       'audio/*': ['.mp3', '.wav'],
     },
     maxFiles: 1,
-    maxSize: 100 * 1024 * 1024, // 100MB
+    maxSize: 100 * 1024 * 1024,
   })
 
   const clearFile = () => {
@@ -41,60 +41,62 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div>
       <label className="label">Artwork</label>
 
       {!selectedFile ? (
         <div
           {...getRootProps()}
           className={`
-            relative border border-dashed cursor-pointer
-            transition-all duration-300 aspect-square max-w-md
+            relative border cursor-pointer
+            transition-all duration-500 aspect-square
             flex flex-col items-center justify-center
             ${
               isDragActive
                 ? 'border-white bg-white/5'
-                : 'border-gray-800 hover:border-gray-600'
+                : 'border-white/10 hover:border-white/30'
             }
           `}
         >
           <input {...getInputProps()} />
 
-          <div className="text-center p-8">
-            <div className="mb-6">
+          <div className="text-center">
+            <div className="mb-8">
               <svg
-                className="w-8 h-8 text-gray-600 mx-auto"
+                className="w-6 h-6 text-white/30 mx-auto"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                strokeWidth={1}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={1}
                   d="M12 4v16m8-8H4"
                 />
               </svg>
             </div>
 
             {isDragActive ? (
-              <p className="text-white text-sm">Drop here</p>
+              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-white uppercase">
+                Drop Here
+              </p>
             ) : (
               <>
-                <p className="text-gray-400 text-sm mb-2">
-                  Drag & drop or click to upload
+                <p className="font-tomorrow text-[10px] tracking-[0.2em] text-white/50 uppercase mb-2">
+                  Drag & Drop
                 </p>
-                <p className="text-gray-600 text-xs">
-                  PNG, JPG, GIF, MP4 — Max 100MB
+                <p className="font-tektur text-[10px] text-white/20">
+                  or click to browse
                 </p>
               </>
             )}
           </div>
         </div>
       ) : (
-        <div className="relative max-w-md">
+        <div className="relative">
           {preview && (
-            <div className="aspect-square bg-gray-950 flex items-center justify-center">
+            <div className="aspect-square bg-black flex items-center justify-center border border-white/10">
               <img
                 src={preview}
                 alt="Preview"
@@ -103,19 +105,19 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-white text-sm truncate">
+          <div className="mt-6 flex items-center justify-between">
+            <div>
+              <p className="font-tektur text-white/80 text-sm truncate max-w-[200px]">
                 {selectedFile.name}
               </p>
-              <p className="text-gray-600 text-xs">
+              <p className="font-tektur text-white/30 text-[10px] mt-1">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
             </div>
 
             <button
               onClick={clearFile}
-              className="text-gray-500 hover:text-white transition-colors text-xs uppercase tracking-wider"
+              className="font-tomorrow text-[10px] tracking-[0.2em] text-white/30 hover:text-white transition-colors duration-300 uppercase"
             >
               Remove
             </button>

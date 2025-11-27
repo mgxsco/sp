@@ -76,12 +76,9 @@ export function MintForm() {
   }
 
   const isLoading = isUploading || isPending || isConfirming
-
-  // Check if user can mint
   const hasRemainingMints = remainingMints === undefined || remainingMints > 0n
   const canMint = isConnected && file && name && !isLoading && contractAddress && mintingEnabled && hasRemainingMints
 
-  // Get block explorer URL based on chain
   const getExplorerUrl = (txHash: string) => {
     switch (chainId) {
       case 11155111:
@@ -111,9 +108,9 @@ export function MintForm() {
   }
 
   return (
-    <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
+    <div className="grid lg:grid-cols-2 gap-16 lg:gap-[8vw]">
       {/* Left Column - Form */}
-      <div className="space-y-10">
+      <div className="space-y-12">
         <FileUpload onFileSelect={setFile} selectedFile={file} />
 
         <div>
@@ -123,7 +120,7 @@ export function MintForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter title"
-            className="input-field"
+            className="input-field font-tektur"
           />
         </div>
 
@@ -134,44 +131,44 @@ export function MintForm() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Enter description (optional)"
             rows={3}
-            className="input-field resize-none"
+            className="input-field font-tektur resize-none"
           />
         </div>
 
-        {/* Attributes Section */}
+        {/* Attributes */}
         <div>
           <label className="label">Attributes</label>
 
           {attributes.length > 0 && (
-            <div className="space-y-2 mb-4">
+            <div className="space-y-0 mb-6">
               {attributes.map((attr, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between py-2 border-b border-gray-900"
+                  className="flex items-center justify-between py-4 border-b border-white/10"
                 >
-                  <div className="flex gap-4">
-                    <span className="text-gray-500 text-sm">{attr.trait_type}</span>
-                    <span className="text-white text-sm">{attr.value}</span>
+                  <div className="flex gap-6">
+                    <span className="font-tektur text-white/40 text-sm">{attr.trait_type}</span>
+                    <span className="font-tektur text-white text-sm">{attr.value}</span>
                   </div>
                   <button
                     onClick={() => removeAttribute(index)}
-                    className="text-gray-600 hover:text-white transition-colors text-xs uppercase tracking-wider"
+                    className="font-tomorrow text-[10px] tracking-[0.2em] text-white/20 hover:text-white transition-colors duration-300 uppercase"
                   >
-                    Remove
+                    ×
                   </button>
                 </div>
               ))}
             </div>
           )}
 
-          <div className="flex gap-4 items-end">
+          <div className="flex gap-6 items-end">
             <div className="flex-1">
               <input
                 type="text"
                 value={newTraitType}
                 onChange={(e) => setNewTraitType(e.target.value)}
                 placeholder="Trait"
-                className="input-field"
+                className="input-field font-tektur"
               />
             </div>
             <div className="flex-1">
@@ -180,13 +177,13 @@ export function MintForm() {
                 value={newTraitValue}
                 onChange={(e) => setNewTraitValue(e.target.value)}
                 placeholder="Value"
-                className="input-field"
+                className="input-field font-tektur"
               />
             </div>
             <button
               onClick={addAttribute}
               disabled={!newTraitType || !newTraitValue}
-              className="text-gray-500 hover:text-white disabled:opacity-30 transition-colors text-xs uppercase tracking-wider pb-3"
+              className="font-tomorrow text-[10px] tracking-[0.2em] text-white/30 hover:text-white disabled:opacity-20 disabled:hover:text-white/30 transition-colors duration-300 uppercase pb-4"
             >
               Add
             </button>
@@ -194,65 +191,50 @@ export function MintForm() {
         </div>
       </div>
 
-      {/* Right Column - Info & Mint */}
-      <div className="space-y-10">
+      {/* Right Column - Info & Action */}
+      <div className="space-y-12 lg:pt-0">
         {/* Collection Info */}
         {contractAddress && (
-          <div className="space-y-4">
-            <h3 className="label">Collection</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-gray-900">
-                <span className="text-gray-500 text-sm">Name</span>
-                <span className="text-white text-sm">{contractName || '—'}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-900">
-                <span className="text-gray-500 text-sm">Total Minted</span>
-                <span className="text-white text-sm">{totalTokens?.toString() ?? '0'}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-900">
-                <span className="text-gray-500 text-sm">Next ID</span>
-                <span className="text-white text-sm">#{nextTokenId?.toString() ?? '0'}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-900">
-                <span className="text-gray-500 text-sm">Price</span>
-                <span className="text-white text-sm">
-                  {mintPrice && mintPrice > 0n ? `${formatEther(mintPrice)} ETH` : 'Free'}
-                </span>
-              </div>
+          <div>
+            <h3 className="label mb-6">Collection</h3>
+            <div className="space-y-0">
+              {[
+                { label: 'Name', value: contractName || '—' },
+                { label: 'Minted', value: totalTokens?.toString() ?? '0' },
+                { label: 'Next ID', value: `#${nextTokenId?.toString() ?? '0'}` },
+                { label: 'Price', value: mintPrice && mintPrice > 0n ? `${formatEther(mintPrice)} ETH` : 'Free' },
+                { label: 'Status', value: mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed' },
+                { label: 'Network', value: getNetworkName() },
+              ].map((item, i) => (
+                <div key={i} className="flex justify-between items-center py-4 border-b border-white/10">
+                  <span className="font-tomorrow text-[10px] tracking-[0.15em] text-white/30 uppercase">{item.label}</span>
+                  <span className="font-tektur text-white/80 text-sm">{item.value}</span>
+                </div>
+              ))}
               {maxPerWallet !== undefined && maxPerWallet > 0n && (
-                <div className="flex justify-between items-center py-2 border-b border-gray-900">
-                  <span className="text-gray-500 text-sm">Remaining</span>
-                  <span className="text-white text-sm">
+                <div className="flex justify-between items-center py-4 border-b border-white/10">
+                  <span className="font-tomorrow text-[10px] tracking-[0.15em] text-white/30 uppercase">Remaining</span>
+                  <span className="font-tektur text-white/80 text-sm">
                     {remainingMints !== undefined && remainingMints < BigInt(2**200)
                       ? remainingMints.toString()
                       : '∞'}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between items-center py-2 border-b border-gray-900">
-                <span className="text-gray-500 text-sm">Status</span>
-                <span className={`text-sm ${mintingEnabled === undefined ? 'text-gray-500' : mintingEnabled ? 'text-white' : 'text-gray-600'}`}>
-                  {mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-900">
-                <span className="text-gray-500 text-sm">Network</span>
-                <span className="text-white text-sm">{getNetworkName()}</span>
-              </div>
             </div>
           </div>
         )}
 
-        {/* Mint Action */}
-        <div className="pt-6">
+        {/* Mint Button */}
+        <div className="pt-4">
           {!isConnected ? (
-            <p className="text-gray-500 text-sm">Connect wallet to mint</p>
+            <p className="font-tektur text-white/30 text-sm">Connect wallet to mint</p>
           ) : !contractAddress ? (
-            <p className="text-gray-500 text-sm">No contract configured</p>
+            <p className="font-tektur text-white/30 text-sm">No contract configured</p>
           ) : !mintingEnabled ? (
-            <p className="text-gray-500 text-sm">Minting is closed</p>
+            <p className="font-tektur text-white/30 text-sm">Minting is closed</p>
           ) : !hasRemainingMints ? (
-            <p className="text-gray-500 text-sm">Wallet limit reached</p>
+            <p className="font-tektur text-white/30 text-sm">Wallet limit reached</p>
           ) : (
             <>
               <button
@@ -261,17 +243,17 @@ export function MintForm() {
                 className="btn-primary w-full"
               >
                 {isLoading ? (
-                  <span>
+                  <span className="font-tomorrow">
                     {isUploading && 'Uploading...'}
-                    {isPending && 'Confirm in wallet...'}
+                    {isPending && 'Confirm in Wallet...'}
                     {isConfirming && 'Minting...'}
                   </span>
                 ) : (
-                  'Mint'
+                  <span className="font-tomorrow">Mint</span>
                 )}
               </button>
 
-              <p className="text-gray-600 text-xs mt-4 text-center">
+              <p className="font-tektur text-white/20 text-[10px] mt-6 text-center">
                 {mintPrice && mintPrice > 0n
                   ? `${formatEther(mintPrice)} ETH + gas`
                   : 'Gas fees only'}
@@ -279,22 +261,24 @@ export function MintForm() {
             </>
           )}
 
-          {/* Success Message */}
+          {/* Success */}
           {isSuccess && hash && (
-            <div className="mt-8 pt-8 border-t border-gray-900">
-              <p className="text-white text-sm mb-4">Minted successfully</p>
-              <div className="flex gap-4">
+            <div className="mt-12 pt-8 border-t border-white/10">
+              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-white uppercase mb-6">
+                Minted Successfully
+              </p>
+              <div className="flex gap-6">
                 <a
                   href={getExplorerUrl(hash)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-white text-xs uppercase tracking-wider transition-colors underline-animate"
+                  className="text-link font-tomorrow text-[10px] tracking-[0.15em] uppercase"
                 >
                   View Transaction
                 </a>
                 <button
                   onClick={resetForm}
-                  className="text-gray-500 hover:text-white text-xs uppercase tracking-wider transition-colors"
+                  className="font-tomorrow text-[10px] tracking-[0.15em] text-white/40 hover:text-white transition-colors duration-300 uppercase"
                 >
                   Mint Another
                 </button>
@@ -302,10 +286,10 @@ export function MintForm() {
             </div>
           )}
 
-          {/* Error Message */}
+          {/* Error */}
           {(uploadError || mintError) && (
-            <div className="mt-8 pt-8 border-t border-gray-900">
-              <p className="text-gray-400 text-sm">
+            <div className="mt-12 pt-8 border-t border-white/10">
+              <p className="font-tektur text-white/50 text-sm">
                 {uploadError || (mintError as Error)?.message || 'An error occurred'}
               </p>
             </div>

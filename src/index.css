@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tektur:wght@400;500;600;700&family=Tomorrow:wght@300;400;500;600;700&display=swap');
 
 :root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Tektur', system-ui, sans-serif;
   line-height: 1.6;
   font-weight: 400;
   color-scheme: dark;
@@ -21,9 +21,16 @@ body {
   background-color: #000000;
 }
 
+/* Headings use Tomorrow */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Tomorrow', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -31,57 +38,104 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333333;
-  border-radius: 3px;
+  background: #222222;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555555;
+  background: #333333;
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-white text-black font-medium py-3 px-8 transition-all duration-200
-           hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply font-['Tomorrow'] uppercase tracking-widest text-sm
+           bg-white text-black py-4 px-10
+           transition-all duration-300 ease-out
+           hover:bg-opacity-90
+           disabled:opacity-30 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-transparent border border-white/30 text-white font-medium py-3 px-8
-           transition-all duration-200 hover:border-white hover:bg-white/5;
+    @apply font-['Tomorrow'] uppercase tracking-widest text-sm
+           bg-transparent border border-white/20 text-white py-4 px-10
+           transition-all duration-300 ease-out
+           hover:border-white hover:bg-white/5;
   }
 
   .card {
-    @apply bg-gray-950 border border-gray-800 p-6;
+    @apply bg-transparent;
   }
 
   .input-field {
-    @apply w-full bg-transparent border-b border-gray-700 px-0 py-3 text-white
-           placeholder-gray-500 focus:outline-none focus:border-white transition-colors duration-200;
+    @apply w-full bg-transparent border-b border-white/20 px-0 py-4
+           text-white text-sm tracking-wide
+           placeholder-white/30
+           focus:outline-none focus:border-white
+           transition-all duration-300;
   }
 
   .label {
-    @apply block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2;
+    @apply block font-['Tomorrow'] text-[10px] font-medium text-white/50
+           uppercase tracking-[0.2em] mb-3;
   }
 
-  /* Animated underline effect like MGXS */
-  .underline-animate {
-    @apply relative inline-block;
+  /* Animated underline effect */
+  .text-link {
+    @apply relative inline-block text-white/60 hover:text-white
+           transition-colors duration-300;
   }
 
-  .underline-animate::after {
+  .text-link::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-px bg-white
+           transition-all duration-300 ease-out;
+  }
+
+  .text-link:hover::after {
+    @apply w-full;
+  }
+
+  /* Draw animation for headers */
+  .draw-line {
+    @apply relative;
+  }
+
+  .draw-line::after {
     content: '';
     @apply absolute bottom-0 left-0 h-px bg-white;
     width: 0;
-    transition: width 0.3s ease-out;
+    animation: drawLine 0.5s ease-out 0.3s forwards;
   }
 
-  .underline-animate:hover::after {
-    width: 100%;
+  @keyframes drawLine {
+    to {
+      width: 60px;
+    }
   }
 }
 
-/* Selection color */
+/* Selection */
 ::selection {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.fade-in-delay {
+  opacity: 0;
+  animation: fadeIn 0.6s ease-out 0.3s forwards;
 }
