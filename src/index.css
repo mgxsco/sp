@@ -8,9 +8,9 @@
   font-family: 'Tektur', system-ui, sans-serif;
   line-height: 1.6;
   font-weight: 400;
-  color-scheme: dark;
-  color: #ffffff;
-  background-color: #000000;
+  color-scheme: light;
+  color: #000000;
+  background-color: #E6FF00;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -18,7 +18,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #000000;
+  background-color: #E6FF00;
 }
 
 /* Headings use Tomorrow */
@@ -34,11 +34,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: #E6FF00;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #222222;
+  background: #000000;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -48,45 +48,45 @@ h1, h2, h3, h4, h5, h6 {
 @layer components {
   .btn-primary {
     @apply font-['Tomorrow'] uppercase tracking-widest text-sm
-           bg-white text-black py-4 px-10
+           bg-black text-[#E6FF00] py-4 px-10
            transition-all duration-300 ease-out
-           hover:bg-opacity-90
+           hover:bg-black/80
            disabled:opacity-30 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
     @apply font-['Tomorrow'] uppercase tracking-widest text-sm
-           bg-transparent border border-white/20 text-white py-4 px-10
+           bg-transparent border border-black/30 text-black py-4 px-10
            transition-all duration-300 ease-out
-           hover:border-white hover:bg-white/5;
+           hover:border-black hover:bg-black/5;
   }
 
   .card {
-    @apply bg-transparent;
+    @apply bg-white/50;
   }
 
   .input-field {
-    @apply w-full bg-transparent border-b border-white/20 px-0 py-4
-           text-white text-sm tracking-wide
-           placeholder-white/30
-           focus:outline-none focus:border-white
+    @apply w-full bg-transparent border-b border-black/30 px-0 py-4
+           text-black text-sm tracking-wide
+           placeholder-black/40
+           focus:outline-none focus:border-black
            transition-all duration-300;
   }
 
   .label {
-    @apply block font-['Tomorrow'] text-[10px] font-medium text-white/50
+    @apply block font-['Tomorrow'] text-[10px] font-medium text-black/50
            uppercase tracking-[0.2em] mb-3;
   }
 
   /* Animated underline effect */
   .text-link {
-    @apply relative inline-block text-white/60 hover:text-white
+    @apply relative inline-block text-black/60 hover:text-black
            transition-colors duration-300;
   }
 
   .text-link::after {
     content: '';
-    @apply absolute bottom-0 left-0 w-0 h-px bg-white
+    @apply absolute bottom-0 left-0 w-0 h-px bg-black
            transition-all duration-300 ease-out;
   }
 
@@ -101,7 +101,7 @@ h1, h2, h3, h4, h5, h6 {
 
   .draw-line::after {
     content: '';
-    @apply absolute bottom-0 left-0 h-px bg-white;
+    @apply absolute bottom-0 left-0 h-px bg-black;
     width: 0;
     animation: drawLine 0.5s ease-out 0.3s forwards;
   }
@@ -115,8 +115,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Selection */
 ::selection {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: rgba(0, 0, 0, 0.2);
+  color: #000000;
 }
 
 /* Fade in animation */

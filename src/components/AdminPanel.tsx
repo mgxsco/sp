@@ -22,17 +22,14 @@ export function AdminPanel() {
     reset,
   } = useNFTMint()
 
-  // Local state for form inputs
   const [newPrice, setNewPrice] = useState('')
   const [newMaxPerWallet, setNewMaxPerWallet] = useState('')
   const [activeAction, setActiveAction] = useState<string | null>(null)
 
-  // Get contract balance
   const { data: contractBalance } = useBalance({
     address: contractAddress as `0x${string}`,
   })
 
-  // Update local state when contract data loads
   useEffect(() => {
     if (mintPrice !== undefined) {
       setNewPrice(formatEther(mintPrice))
@@ -45,7 +42,6 @@ export function AdminPanel() {
     }
   }, [maxPerWallet])
 
-  // Reset active action on success
   useEffect(() => {
     if (isSuccess) {
       setTimeout(() => {
@@ -97,16 +93,16 @@ export function AdminPanel() {
   }
 
   return (
-    <div className="border-t border-white/10 pt-20 mt-20">
+    <div className="border-t border-black/10 pt-20 mt-20">
       {/* Admin Header */}
       <div className="mb-12">
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-2 h-2 bg-white rounded-full"></div>
-          <h2 className="font-tomorrow text-2xl md:text-3xl font-medium text-white tracking-wide uppercase">
+          <div className="w-2 h-2 bg-black rounded-full"></div>
+          <h2 className="font-tomorrow text-2xl md:text-3xl font-medium text-black tracking-wide uppercase">
             Admin
           </h2>
         </div>
-        <p className="text-white/40 text-sm font-tektur">
+        <p className="text-black/50 text-sm font-tektur">
           Contract owner controls
         </p>
       </div>
@@ -128,12 +124,12 @@ export function AdminPanel() {
               <button
                 onClick={handleSetPrice}
                 disabled={isLoading || !newPrice}
-                className="font-tomorrow text-[10px] tracking-[0.2em] text-white/50 hover:text-white disabled:opacity-20 transition-colors duration-300 uppercase pb-4"
+                className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 transition-colors duration-300 uppercase pb-4"
               >
                 {activeAction === 'price' && isLoading ? 'Updating...' : 'Update'}
               </button>
             </div>
-            <p className="font-tektur text-white/20 text-[10px] mt-2">
+            <p className="font-tektur text-black/30 text-[10px] mt-2">
               Current: {mintPrice !== undefined ? `${formatEther(mintPrice)} ETH` : '...'}
             </p>
           </div>
@@ -153,12 +149,12 @@ export function AdminPanel() {
               <button
                 onClick={handleSetMaxPerWallet}
                 disabled={isLoading}
-                className="font-tomorrow text-[10px] tracking-[0.2em] text-white/50 hover:text-white disabled:opacity-20 transition-colors duration-300 uppercase pb-4"
+                className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 transition-colors duration-300 uppercase pb-4"
               >
                 {activeAction === 'maxWallet' && isLoading ? 'Updating...' : 'Update'}
               </button>
             </div>
-            <p className="font-tektur text-white/20 text-[10px] mt-2">
+            <p className="font-tektur text-black/30 text-[10px] mt-2">
               Current: {maxPerWallet !== undefined ? (maxPerWallet === 0n ? 'Unlimited' : maxPerWallet.toString()) : '...'}
             </p>
           </div>
@@ -166,8 +162,8 @@ export function AdminPanel() {
           {/* Minting Toggle */}
           <div>
             <label className="label">Minting Status</label>
-            <div className="flex items-center justify-between py-4 border-b border-white/10">
-              <span className="font-tektur text-white/80">
+            <div className="flex items-center justify-between py-4 border-b border-black/10">
+              <span className="font-tektur text-black/80">
                 {mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed'}
               </span>
               <button
@@ -175,8 +171,8 @@ export function AdminPanel() {
                 disabled={isLoading || mintingEnabled === undefined}
                 className={`font-tomorrow text-[10px] tracking-[0.2em] uppercase transition-colors duration-300 ${
                   mintingEnabled
-                    ? 'text-white/50 hover:text-red-400'
-                    : 'text-white/50 hover:text-green-400'
+                    ? 'text-black/50 hover:text-red-600'
+                    : 'text-black/50 hover:text-green-600'
                 } disabled:opacity-20`}
               >
                 {activeAction === 'minting' && isLoading
@@ -195,31 +191,31 @@ export function AdminPanel() {
           <div>
             <label className="label">Contract Stats</label>
             <div className="space-y-0">
-              <div className="flex justify-between items-center py-4 border-b border-white/10">
-                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-white/30 uppercase">
+              <div className="flex justify-between items-center py-4 border-b border-black/10">
+                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
                   Total Minted
                 </span>
-                <span className="font-tektur text-white/80 text-sm">
+                <span className="font-tektur text-black/80 text-sm">
                   {totalTokens?.toString() ?? '0'}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-4 border-b border-white/10">
-                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-white/30 uppercase">
+              <div className="flex justify-between items-center py-4 border-b border-black/10">
+                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
                   Contract Balance
                 </span>
-                <span className="font-tektur text-white/80 text-sm">
+                <span className="font-tektur text-black/80 text-sm">
                   {contractBalance ? `${parseFloat(formatEther(contractBalance.value)).toFixed(4)} ETH` : '0 ETH'}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-4 border-b border-white/10">
-                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-white/30 uppercase">
+              <div className="flex justify-between items-center py-4 border-b border-black/10">
+                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
                   Contract
                 </span>
                 <a
                   href={`https://sepolia.etherscan.io/address/${contractAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-tektur text-white/50 hover:text-white text-xs transition-colors duration-300"
+                  className="font-tektur text-black/60 hover:text-black text-xs transition-colors duration-300"
                 >
                   {contractAddress?.slice(0, 6)}...{contractAddress?.slice(-4)}
                 </a>
@@ -241,7 +237,7 @@ export function AdminPanel() {
                   : `Withdraw ${contractBalance ? parseFloat(formatEther(contractBalance.value)).toFixed(4) : '0'} ETH`}
               </span>
             </button>
-            <p className="font-tektur text-white/20 text-[10px] mt-3 text-center">
+            <p className="font-tektur text-black/30 text-[10px] mt-3 text-center">
               Sends funds to owner wallet
             </p>
           </div>
@@ -249,7 +245,7 @@ export function AdminPanel() {
           {/* Status Messages */}
           {isSuccess && (
             <div className="pt-4">
-              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-green-400 uppercase">
+              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-green-600 uppercase">
                 Transaction Successful
               </p>
             </div>
@@ -257,7 +253,7 @@ export function AdminPanel() {
 
           {error && (
             <div className="pt-4">
-              <p className="font-tektur text-red-400/80 text-sm">
+              <p className="font-tektur text-red-600 text-sm">
                 {(error as Error)?.message || 'Transaction failed'}
               </p>
             </div>

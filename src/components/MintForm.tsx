@@ -144,15 +144,15 @@ export function MintForm() {
               {attributes.map((attr, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between py-4 border-b border-white/10"
+                  className="flex items-center justify-between py-4 border-b border-black/10"
                 >
                   <div className="flex gap-6">
-                    <span className="font-tektur text-white/40 text-sm">{attr.trait_type}</span>
-                    <span className="font-tektur text-white text-sm">{attr.value}</span>
+                    <span className="font-tektur text-black/50 text-sm">{attr.trait_type}</span>
+                    <span className="font-tektur text-black text-sm">{attr.value}</span>
                   </div>
                   <button
                     onClick={() => removeAttribute(index)}
-                    className="font-tomorrow text-[10px] tracking-[0.2em] text-white/20 hover:text-white transition-colors duration-300 uppercase"
+                    className="font-tomorrow text-[10px] tracking-[0.2em] text-black/30 hover:text-black transition-colors duration-300 uppercase"
                   >
                     ×
                   </button>
@@ -183,7 +183,7 @@ export function MintForm() {
             <button
               onClick={addAttribute}
               disabled={!newTraitType || !newTraitValue}
-              className="font-tomorrow text-[10px] tracking-[0.2em] text-white/30 hover:text-white disabled:opacity-20 disabled:hover:text-white/30 transition-colors duration-300 uppercase pb-4"
+              className="font-tomorrow text-[10px] tracking-[0.2em] text-black/40 hover:text-black disabled:opacity-20 disabled:hover:text-black/40 transition-colors duration-300 uppercase pb-4"
             >
               Add
             </button>
@@ -206,15 +206,15 @@ export function MintForm() {
                 { label: 'Status', value: mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed' },
                 { label: 'Network', value: getNetworkName() },
               ].map((item, i) => (
-                <div key={i} className="flex justify-between items-center py-4 border-b border-white/10">
-                  <span className="font-tomorrow text-[10px] tracking-[0.15em] text-white/30 uppercase">{item.label}</span>
-                  <span className="font-tektur text-white/80 text-sm">{item.value}</span>
+                <div key={i} className="flex justify-between items-center py-4 border-b border-black/10">
+                  <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">{item.label}</span>
+                  <span className="font-tektur text-black/80 text-sm">{item.value}</span>
                 </div>
               ))}
               {maxPerWallet !== undefined && maxPerWallet > 0n && (
-                <div className="flex justify-between items-center py-4 border-b border-white/10">
-                  <span className="font-tomorrow text-[10px] tracking-[0.15em] text-white/30 uppercase">Remaining</span>
-                  <span className="font-tektur text-white/80 text-sm">
+                <div className="flex justify-between items-center py-4 border-b border-black/10">
+                  <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">Remaining</span>
+                  <span className="font-tektur text-black/80 text-sm">
                     {remainingMints !== undefined && remainingMints < BigInt(2**200)
                       ? remainingMints.toString()
                       : '∞'}
@@ -228,13 +228,13 @@ export function MintForm() {
         {/* Mint Button */}
         <div className="pt-4">
           {!isConnected ? (
-            <p className="font-tektur text-white/30 text-sm">Connect wallet to mint</p>
+            <p className="font-tektur text-black/40 text-sm">Connect wallet to mint</p>
           ) : !contractAddress ? (
-            <p className="font-tektur text-white/30 text-sm">No contract configured</p>
+            <p className="font-tektur text-black/40 text-sm">No contract configured</p>
           ) : !mintingEnabled ? (
-            <p className="font-tektur text-white/30 text-sm">Minting is closed</p>
+            <p className="font-tektur text-black/40 text-sm">Minting is closed</p>
           ) : !hasRemainingMints ? (
-            <p className="font-tektur text-white/30 text-sm">Wallet limit reached</p>
+            <p className="font-tektur text-black/40 text-sm">Wallet limit reached</p>
           ) : (
             <>
               <button
@@ -253,7 +253,7 @@ export function MintForm() {
                 )}
               </button>
 
-              <p className="font-tektur text-white/20 text-[10px] mt-6 text-center">
+              <p className="font-tektur text-black/30 text-[10px] mt-6 text-center">
                 {mintPrice && mintPrice > 0n
                   ? `${formatEther(mintPrice)} ETH + gas`
                   : 'Gas fees only'}
@@ -263,8 +263,8 @@ export function MintForm() {
 
           {/* Success */}
           {isSuccess && hash && (
-            <div className="mt-12 pt-8 border-t border-white/10">
-              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-white uppercase mb-6">
+            <div className="mt-12 pt-8 border-t border-black/10">
+              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-black uppercase mb-6">
                 Minted Successfully
               </p>
               <div className="flex gap-6">
@@ -278,7 +278,7 @@ export function MintForm() {
                 </a>
                 <button
                   onClick={resetForm}
-                  className="font-tomorrow text-[10px] tracking-[0.15em] text-white/40 hover:text-white transition-colors duration-300 uppercase"
+                  className="font-tomorrow text-[10px] tracking-[0.15em] text-black/50 hover:text-black transition-colors duration-300 uppercase"
                 >
                   Mint Another
                 </button>
@@ -288,8 +288,8 @@ export function MintForm() {
 
           {/* Error */}
           {(uploadError || mintError) && (
-            <div className="mt-12 pt-8 border-t border-white/10">
-              <p className="font-tektur text-white/50 text-sm">
+            <div className="mt-12 pt-8 border-t border-black/10">
+              <p className="font-tektur text-red-600 text-sm">
                 {uploadError || (mintError as Error)?.message || 'An error occurred'}
               </p>
             </div>

@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        lime: '#E6FF00',
         black: '#000000',
-        white: '#ffffff',
       },
       fontFamily: {
         tomorrow: ['Tomorrow', 'sans-serif'],
