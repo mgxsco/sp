@@ -2,31 +2,79 @@ import { ConnectButton } from '@rainbow-me/rainbowkit'
 
 export function Header() {
   return (
-    <header className="border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">NFT Minter</h1>
-            <p className="text-xs text-slate-400">Create & Mint Your NFTs</p>
-          </div>
-        </div>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-b border-gray-900">
+      <div className="max-w-5xl mx-auto px-6 md:px-8 py-4 flex items-center justify-between">
+        <a href="https://www.mgxs.co" target="_blank" rel="noopener noreferrer" className="text-white font-medium tracking-widest text-sm hover:opacity-70 transition-opacity">
+          MGXS
+        </a>
 
-        <ConnectButton />
+        <ConnectButton.Custom>
+          {({
+            account,
+            chain,
+            openAccountModal,
+            openChainModal,
+            openConnectModal,
+            mounted,
+          }) => {
+            const ready = mounted
+            const connected = ready && account && chain
+
+            return (
+              <div
+                {...(!ready && {
+                  'aria-hidden': true,
+                  style: {
+                    opacity: 0,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  },
+                })}
+              >
+                {(() => {
+                  if (!connected) {
+                    return (
+                      <button
+                        onClick={openConnectModal}
+                        className="text-xs tracking-wider text-gray-400 hover:text-white transition-colors uppercase"
+                      >
+                        Connect
+                      </button>
+                    )
+                  }
+
+                  if (chain.unsupported) {
+                    return (
+                      <button
+                        onClick={openChainModal}
+                        className="text-xs tracking-wider text-red-400 hover:text-red-300 transition-colors uppercase"
+                      >
+                        Wrong Network
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={openChainModal}
+                        className="text-xs tracking-wider text-gray-500 hover:text-white transition-colors uppercase"
+                      >
+                        {chain.name}
+                      </button>
+                      <button
+                        onClick={openAccountModal}
+                        className="text-xs tracking-wider text-gray-400 hover:text-white transition-colors"
+                      >
+                        {account.displayName}
+                      </button>
+                    </div>
+                  )
+                })()}
+              </div>
+            )
+          }}
+        </ConnectButton.Custom>
       </div>
     </header>
   )
