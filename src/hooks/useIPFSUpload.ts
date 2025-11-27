@@ -15,6 +15,22 @@ interface UploadResult {
   metadataUrl: string
 }
 
+// Helper to create a slug from NFT name
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+// Get file extension from file
+function getFileExtension(file: File): string {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  return ext || 'png'
+}
+
 export function useIPFSUpload() {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,21 +47,31 @@ export function useIPFSUpload() {
       const pinataSecretKey = import.meta.env.VITE_PINATA_SECRET_KEY
 
       if (!pinataApiKey || !pinataSecretKey) {
-        // Demo mode - return mock IPFS URLs for testing
-        console.warn('Pinata API keys not configured. Using demo mode.')
-        const mockCID = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
-        const mockImageUrl = `ipfs://${mockCID}`
-        const mockMetadataUrl = `ipfs://${mockCID}_metadata`
-
-        return {
-          imageUrl: mockImageUrl,
-          metadataUrl: mockMetadataUrl,
-        }
+        throw new Error('Pinata API keys not configured. Please add VITE_PINATA_API_KEY and VITE_PINATA_SECRET_KEY to your environment variables.')
       }
 
-      // Upload image to Pinata
+      // Create proper file name from NFT name
+      const slug = slugify(metadata.name) || 'nft'
+      const fileExtension = getFileExtension(file)
+      const imageName = `${slug}.${fileExtension}`
+      const metadataName = `${slug}-metadata.json`
+
+      // Create a new file with proper name
+      const renamedFile = new File([file], imageName, { type: file.type })
+
+      // Upload image to Pinata with proper naming
       const imageFormData = new FormData()
-      imageFormData.append('file', file)
+      imageFormData.append('file', renamedFile)
+      imageFormData.append('pinataMetadata', JSON.stringify({
+        name: imageName,
+        keyvalues: {
+          nftName: metadata.name,
+          type: 'image'
+        }
+      }))
+      imageFormData.append('pinataOptions', JSON.stringify({
+        cidVersion: 1
+      }))
 
       const imageResponse = await fetch(
         'https://api.pinata.cloud/pinning/pinFileToIPFS',
@@ -60,16 +86,19 @@ export function useIPFSUpload() {
       )
 
       if (!imageResponse.ok) {
-        throw new Error('Failed to upload image to IPFS')
+        const errorData = await imageResponse.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to upload image to IPFS')
       }
 
       const imageResult = await imageResponse.json()
       const imageUrl = `ipfs://${imageResult.IpfsHash}`
 
-      // Create and upload metadata
+      // Create and upload metadata with proper naming
       const fullMetadata: NFTMetadata = {
-        ...metadata,
+        name: metadata.name,
+        description: metadata.description || '',
         image: imageUrl,
+        attributes: metadata.attributes,
       }
 
       const metadataResponse = await fetch(
@@ -81,12 +110,25 @@ export function useIPFSUpload() {
             pinata_api_key: pinataApiKey,
             pinata_secret_api_key: pinataSecretKey,
           },
-          body: JSON.stringify(fullMetadata),
+          body: JSON.stringify({
+            pinataContent: fullMetadata,
+            pinataMetadata: {
+              name: metadataName,
+              keyvalues: {
+                nftName: metadata.name,
+                type: 'metadata'
+              }
+            },
+            pinataOptions: {
+              cidVersion: 1
+            }
+          }),
         }
       )
 
       if (!metadataResponse.ok) {
-        throw new Error('Failed to upload metadata to IPFS')
+        const errorData = await metadataResponse.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to upload metadata to IPFS')
       }
 
       const metadataResult = await metadataResponse.json()
