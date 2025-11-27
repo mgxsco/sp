@@ -8,14 +8,13 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title PublicMintERC1155
- * @dev ERC1155 contract with public minting, configurable pricing, and supply limits
+ * @dev ERC1155 contract with public minting where anyone can create new NFTs
  *
  * Features:
- * - Public minting (any wallet can mint)
- * - Per-token max supply limits
+ * - Anyone can mint NEW tokens with their own artwork/URI
+ * - Auto-incrementing token IDs (0, 1, 2, 3...)
  * - Configurable mint price (can be free or paid)
  * - Per-wallet mint limits (optional)
- * - Different artwork/URI for each token ID
  * - Owner can update settings anytime
  */
 contract PublicMintERC1155 is ERC1155, ERC1155Supply, Ownable {
@@ -34,17 +33,16 @@ contract PublicMintERC1155 is ERC1155, ERC1155Supply, Ownable {
 
     // Per-token settings
     mapping(uint256 => string) private _tokenURIs;
-    mapping(uint256 => uint256) public maxSupply;  // 0 = unlimited
+    mapping(uint256 => address) public tokenCreator;  // Track who created each token
 
     // Per-wallet tracking
     mapping(address => uint256) public walletMintCount;
 
     // Events
-    event TokenCreated(uint256 indexed tokenId, string uri, uint256 maxSupply);
+    event TokenCreated(uint256 indexed tokenId, address indexed creator, string uri);
     event MintPriceUpdated(uint256 newPrice);
     event MaxPerWalletUpdated(uint256 newLimit);
     event MintingStatusUpdated(bool enabled);
-    event TokenMinted(address indexed to, uint256 indexed tokenId, uint256 amount);
 
     constructor(
         string memory _name,
@@ -62,139 +60,71 @@ contract PublicMintERC1155 is ERC1155, ERC1155Supply, Ownable {
     // ============ Public Minting ============
 
     /**
-     * @dev Mint an existing token (public)
-     * @param tokenId The token ID to mint
-     * @param amount Number of tokens to mint
+     * @dev Anyone can mint a NEW token with their own URI
+     * Creates the next token ID and mints it to the caller
+     * @param tokenURI The metadata URI for this NFT
+     * @return tokenId The ID of the newly created token
      */
-    function mint(uint256 tokenId, uint256 amount) external payable {
+    function mintNew(string memory tokenURI) external payable returns (uint256) {
         require(mintingEnabled, "Minting is disabled");
-        require(bytes(_tokenURIs[tokenId]).length > 0, "Token does not exist");
-        require(msg.value >= mintPrice * amount, "Insufficient payment");
-
-        // Check max supply
-        if (maxSupply[tokenId] > 0) {
-            require(
-                totalSupply(tokenId) + amount <= maxSupply[tokenId],
-                "Exceeds max supply"
-            );
-        }
+        require(msg.value >= mintPrice, "Insufficient payment");
+        require(bytes(tokenURI).length > 0, "URI cannot be empty");
 
         // Check per-wallet limit
         if (maxPerWallet > 0) {
             require(
-                walletMintCount[msg.sender] + amount <= maxPerWallet,
+                walletMintCount[msg.sender] + 1 <= maxPerWallet,
                 "Exceeds wallet limit"
             );
         }
 
-        walletMintCount[msg.sender] += amount;
-        _mint(msg.sender, tokenId, amount, "");
+        // Create new token
+        uint256 newTokenId = _currentTokenId++;
+        _tokenURIs[newTokenId] = tokenURI;
+        tokenCreator[newTokenId] = msg.sender;
 
-        emit TokenMinted(msg.sender, tokenId, amount);
+        // Update wallet count and mint
+        walletMintCount[msg.sender] += 1;
+        _mint(msg.sender, newTokenId, 1, "");
+
+        emit TokenCreated(newTokenId, msg.sender, tokenURI);
+        return newTokenId;
     }
 
     /**
-     * @dev Mint to a specific address (public)
+     * @dev Get the next token ID that will be minted
      */
-    function mintTo(address to, uint256 tokenId, uint256 amount) external payable {
-        require(mintingEnabled, "Minting is disabled");
-        require(bytes(_tokenURIs[tokenId]).length > 0, "Token does not exist");
-        require(msg.value >= mintPrice * amount, "Insufficient payment");
-
-        if (maxSupply[tokenId] > 0) {
-            require(
-                totalSupply(tokenId) + amount <= maxSupply[tokenId],
-                "Exceeds max supply"
-            );
-        }
-
-        if (maxPerWallet > 0) {
-            require(
-                walletMintCount[to] + amount <= maxPerWallet,
-                "Exceeds wallet limit"
-            );
-        }
-
-        walletMintCount[to] += amount;
-        _mint(to, tokenId, amount, "");
-
-        emit TokenMinted(to, tokenId, amount);
+    function nextTokenId() external view returns (uint256) {
+        return _currentTokenId;
     }
 
     // ============ Owner Functions ============
 
     /**
-     * @dev Create a new token with URI and optional max supply (owner only)
-     * @param tokenURI The metadata URI for this token
-     * @param _maxSupply Maximum supply (0 = unlimited)
+     * @dev Owner can mint new token (bypasses payment)
      */
-    function createToken(string memory tokenURI, uint256 _maxSupply) external onlyOwner returns (uint256) {
-        uint256 newTokenId = _currentTokenId++;
-        _tokenURIs[newTokenId] = tokenURI;
-        maxSupply[newTokenId] = _maxSupply;
-
-        emit TokenCreated(newTokenId, tokenURI, _maxSupply);
-        return newTokenId;
-    }
-
-    /**
-     * @dev Create and mint a new token in one transaction (owner only)
-     */
-    function createAndMint(
+    function ownerMintNew(
         address to,
-        string memory tokenURI,
-        uint256 _maxSupply,
-        uint256 amount
+        string memory tokenURI
     ) external onlyOwner returns (uint256) {
+        require(bytes(tokenURI).length > 0, "URI cannot be empty");
+
         uint256 newTokenId = _currentTokenId++;
         _tokenURIs[newTokenId] = tokenURI;
-        maxSupply[newTokenId] = _maxSupply;
+        tokenCreator[newTokenId] = to;
 
-        if (_maxSupply > 0) {
-            require(amount <= _maxSupply, "Amount exceeds max supply");
-        }
+        _mint(to, newTokenId, 1, "");
 
-        _mint(to, newTokenId, amount, "");
-
-        emit TokenCreated(newTokenId, tokenURI, _maxSupply);
-        emit TokenMinted(to, newTokenId, amount);
+        emit TokenCreated(newTokenId, to, tokenURI);
         return newTokenId;
-    }
-
-    /**
-     * @dev Owner mint (bypasses payment and limits)
-     */
-    function ownerMint(address to, uint256 tokenId, uint256 amount) external onlyOwner {
-        require(bytes(_tokenURIs[tokenId]).length > 0, "Token does not exist");
-
-        if (maxSupply[tokenId] > 0) {
-            require(
-                totalSupply(tokenId) + amount <= maxSupply[tokenId],
-                "Exceeds max supply"
-            );
-        }
-
-        _mint(to, tokenId, amount, "");
-        emit TokenMinted(to, tokenId, amount);
     }
 
     /**
      * @dev Update token URI (owner only)
      */
     function setTokenURI(uint256 tokenId, string memory tokenURI) external onlyOwner {
+        require(bytes(_tokenURIs[tokenId]).length > 0, "Token does not exist");
         _tokenURIs[tokenId] = tokenURI;
-    }
-
-    /**
-     * @dev Update max supply for a token (owner only)
-     * Can only increase or set to unlimited (0)
-     */
-    function setMaxSupply(uint256 tokenId, uint256 _maxSupply) external onlyOwner {
-        require(
-            _maxSupply == 0 || _maxSupply >= totalSupply(tokenId),
-            "Cannot set below current supply"
-        );
-        maxSupply[tokenId] = _maxSupply;
     }
 
     /**
@@ -241,9 +171,9 @@ contract PublicMintERC1155 is ERC1155, ERC1155Supply, Ownable {
     }
 
     /**
-     * @dev Get total number of token types created
+     * @dev Get total number of tokens created
      */
-    function totalTokenTypes() external view returns (uint256) {
+    function totalTokens() external view returns (uint256) {
         return _currentTokenId;
     }
 
@@ -252,16 +182,6 @@ contract PublicMintERC1155 is ERC1155, ERC1155Supply, Ownable {
      */
     function tokenExists(uint256 tokenId) external view returns (bool) {
         return bytes(_tokenURIs[tokenId]).length > 0;
-    }
-
-    /**
-     * @dev Get remaining supply for a token (returns max uint256 if unlimited)
-     */
-    function remainingSupply(uint256 tokenId) external view returns (uint256) {
-        if (maxSupply[tokenId] == 0) {
-            return type(uint256).max;
-        }
-        return maxSupply[tokenId] - totalSupply(tokenId);
     }
 
     /**

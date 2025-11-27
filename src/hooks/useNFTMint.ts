@@ -48,10 +48,16 @@ export function useNFTMint() {
     functionName: 'mintingEnabled',
   })
 
-  const { data: totalTokenTypes } = useReadContract({
+  const { data: totalTokens } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: PUBLIC_MINT_ERC1155_ABI,
-    functionName: 'totalTokenTypes',
+    functionName: 'totalTokens',
+  })
+
+  const { data: nextTokenId } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'nextTokenId',
   })
 
   const { data: remainingMints } = useReadContract({
@@ -66,49 +72,28 @@ export function useNFTMint() {
   // ============ Public Functions ============
 
   /**
-   * Public mint - anyone can call this
+   * Mint a NEW token with your own URI - anyone can call this
    */
-  const mint = async (tokenId: bigint, amount: bigint = 1n) => {
+  const mintNew = async (tokenURI: string) => {
     if (!CONTRACT_ADDRESS) {
       throw new Error('NFT contract address not configured')
     }
 
-    const totalCost = (mintPrice || 0n) * amount
-
     writeContract({
       address: CONTRACT_ADDRESS,
       abi: PUBLIC_MINT_ERC1155_ABI,
-      functionName: 'mint',
-      args: [tokenId, amount],
-      value: totalCost,
-    })
-  }
-
-  /**
-   * Public mint to specific address
-   */
-  const mintTo = async (toAddress: `0x${string}`, tokenId: bigint, amount: bigint = 1n) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('NFT contract address not configured')
-    }
-
-    const totalCost = (mintPrice || 0n) * amount
-
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: PUBLIC_MINT_ERC1155_ABI,
-      functionName: 'mintTo',
-      args: [toAddress, tokenId, amount],
-      value: totalCost,
+      functionName: 'mintNew',
+      args: [tokenURI],
+      value: mintPrice || 0n,
     })
   }
 
   // ============ Owner Functions ============
 
   /**
-   * Create a new token type (owner only)
+   * Owner mint new token (bypasses payment)
    */
-  const createToken = async (tokenURI: string, maxSupply: bigint = 0n) => {
+  const ownerMintNew = async (toAddress: `0x${string}`, tokenURI: string) => {
     if (!CONTRACT_ADDRESS) {
       throw new Error('NFT contract address not configured')
     }
@@ -116,45 +101,8 @@ export function useNFTMint() {
     writeContract({
       address: CONTRACT_ADDRESS,
       abi: PUBLIC_MINT_ERC1155_ABI,
-      functionName: 'createToken',
-      args: [tokenURI, maxSupply],
-    })
-  }
-
-  /**
-   * Create and mint new token in one transaction (owner only)
-   */
-  const createAndMint = async (
-    toAddress: `0x${string}`,
-    tokenURI: string,
-    maxSupply: bigint = 0n,
-    amount: bigint = 1n
-  ) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('NFT contract address not configured')
-    }
-
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: PUBLIC_MINT_ERC1155_ABI,
-      functionName: 'createAndMint',
-      args: [toAddress, tokenURI, maxSupply, amount],
-    })
-  }
-
-  /**
-   * Owner mint (bypasses payment)
-   */
-  const ownerMint = async (toAddress: `0x${string}`, tokenId: bigint, amount: bigint = 1n) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('NFT contract address not configured')
-    }
-
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: PUBLIC_MINT_ERC1155_ABI,
-      functionName: 'ownerMint',
-      args: [toAddress, tokenId, amount],
+      functionName: 'ownerMintNew',
+      args: [toAddress, tokenURI],
     })
   }
 
@@ -207,13 +155,10 @@ export function useNFTMint() {
   }
 
   return {
-    // Public functions
-    mint,
-    mintTo,
+    // Public function - anyone can mint
+    mintNew,
     // Owner functions
-    createToken,
-    createAndMint,
-    ownerMint,
+    ownerMintNew,
     setMintPrice,
     setMaxPerWallet,
     setMintingEnabled,
@@ -234,7 +179,8 @@ export function useNFTMint() {
     mintPrice,
     maxPerWallet,
     mintingEnabled,
-    totalTokenTypes,
+    totalTokens,
+    nextTokenId,
     remainingMints,
     // User state
     isOwner,

@@ -1,25 +1,11 @@
-// PublicMintERC1155 ABI - Custom contract with public minting
+// PublicMintERC1155 ABI - Anyone can mint new NFTs
 // Deploy using contracts/PublicMintERC1155.sol
 export const PUBLIC_MINT_ERC1155_ABI = [
   // ============ Public Minting ============
   {
-    inputs: [
-      { name: 'tokenId', type: 'uint256' },
-      { name: 'amount', type: 'uint256' }
-    ],
-    name: 'mint',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function'
-  },
-  {
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'tokenId', type: 'uint256' },
-      { name: 'amount', type: 'uint256' }
-    ],
-    name: 'mintTo',
-    outputs: [],
+    inputs: [{ name: 'tokenURI', type: 'string' }],
+    name: 'mintNew',
+    outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'payable',
     type: 'function'
   },
@@ -27,34 +13,11 @@ export const PUBLIC_MINT_ERC1155_ABI = [
   // ============ Owner Functions ============
   {
     inputs: [
-      { name: 'tokenURI', type: 'string' },
-      { name: '_maxSupply', type: 'uint256' }
-    ],
-    name: 'createToken',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  {
-    inputs: [
       { name: 'to', type: 'address' },
-      { name: 'tokenURI', type: 'string' },
-      { name: '_maxSupply', type: 'uint256' },
-      { name: 'amount', type: 'uint256' }
+      { name: 'tokenURI', type: 'string' }
     ],
-    name: 'createAndMint',
+    name: 'ownerMintNew',
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  {
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'tokenId', type: 'uint256' },
-      { name: 'amount', type: 'uint256' }
-    ],
-    name: 'ownerMint',
-    outputs: [],
     stateMutability: 'nonpayable',
     type: 'function'
   },
@@ -64,16 +27,6 @@ export const PUBLIC_MINT_ERC1155_ABI = [
       { name: 'tokenURI', type: 'string' }
     ],
     name: 'setTokenURI',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function'
-  },
-  {
-    inputs: [
-      { name: 'tokenId', type: 'uint256' },
-      { name: '_maxSupply', type: 'uint256' }
-    ],
-    name: 'setMaxSupply',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function'
@@ -152,7 +105,14 @@ export const PUBLIC_MINT_ERC1155_ABI = [
   },
   {
     inputs: [],
-    name: 'totalTokenTypes',
+    name: 'totalTokens',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'nextTokenId',
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function'
@@ -173,13 +133,6 @@ export const PUBLIC_MINT_ERC1155_ABI = [
   },
   {
     inputs: [{ name: 'tokenId', type: 'uint256' }],
-    name: 'maxSupply',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [{ name: 'tokenId', type: 'uint256' }],
     name: 'tokenExists',
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
@@ -187,8 +140,8 @@ export const PUBLIC_MINT_ERC1155_ABI = [
   },
   {
     inputs: [{ name: 'tokenId', type: 'uint256' }],
-    name: 'remainingSupply',
-    outputs: [{ name: '', type: 'uint256' }],
+    name: 'tokenCreator',
+    outputs: [{ name: '', type: 'address' }],
     stateMutability: 'view',
     type: 'function'
   },
@@ -222,20 +175,10 @@ export const PUBLIC_MINT_ERC1155_ABI = [
     anonymous: false,
     inputs: [
       { indexed: true, name: 'tokenId', type: 'uint256' },
-      { indexed: false, name: 'uri', type: 'string' },
-      { indexed: false, name: 'maxSupply', type: 'uint256' }
+      { indexed: true, name: 'creator', type: 'address' },
+      { indexed: false, name: 'uri', type: 'string' }
     ],
     name: 'TokenCreated',
-    type: 'event'
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'to', type: 'address' },
-      { indexed: true, name: 'tokenId', type: 'uint256' },
-      { indexed: false, name: 'amount', type: 'uint256' }
-    ],
-    name: 'TokenMinted',
     type: 'event'
   },
   {

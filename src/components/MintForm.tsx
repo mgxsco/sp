@@ -19,12 +19,10 @@ export function MintForm() {
   const [attributes, setAttributes] = useState<Attribute[]>([])
   const [newTraitType, setNewTraitType] = useState('')
   const [newTraitValue, setNewTraitValue] = useState('')
-  const [amount, setAmount] = useState('1')
-  const [maxSupply, setMaxSupply] = useState('0')
 
   const { uploadToIPFS, isUploading, error: uploadError } = useIPFSUpload()
   const {
-    createAndMint,
+    mintNew,
     isPending,
     isConfirming,
     isSuccess,
@@ -37,7 +35,8 @@ export function MintForm() {
     mintPrice,
     maxPerWallet,
     mintingEnabled,
-    totalTokenTypes,
+    totalTokens,
+    nextTokenId,
     remainingMints,
     isOwner,
   } = useNFTMint()
@@ -54,7 +53,7 @@ export function MintForm() {
     setAttributes(attributes.filter((_, i) => i !== index))
   }
 
-  const handleCreateAndMint = async () => {
+  const handleMint = async () => {
     if (!file || !name || !address) return
 
     try {
@@ -64,12 +63,7 @@ export function MintForm() {
         attributes: attributes.length > 0 ? attributes : undefined,
       })
 
-      await createAndMint(
-        address,
-        metadataUrl,
-        BigInt(maxSupply || '0'),
-        BigInt(amount || '1')
-      )
+      await mintNew(metadataUrl)
     } catch (err) {
       console.error('Minting failed:', err)
     }
@@ -80,13 +74,14 @@ export function MintForm() {
     setName('')
     setDescription('')
     setAttributes([])
-    setAmount('1')
-    setMaxSupply('0')
     reset()
   }
 
   const isLoading = isUploading || isPending || isConfirming
-  const canMint = isConnected && file && name && !isLoading && isOwner && contractAddress
+
+  // Check if user can mint
+  const hasRemainingMints = remainingMints === undefined || remainingMints > 0n
+  const canMint = isConnected && file && name && !isLoading && contractAddress && mintingEnabled && hasRemainingMints
 
   // Get block explorer URL based on chain
   const getExplorerUrl = (txHash: string) => {
@@ -107,7 +102,7 @@ export function MintForm() {
       {/* Left Column - Form */}
       <div className="space-y-6">
         <div className="card">
-          <h2 className="text-lg font-semibold text-white mb-6">Create New NFT</h2>
+          <h2 className="text-lg font-semibold text-white mb-6">Create Your NFT</h2>
 
           <div className="space-y-6">
             <FileUpload onFileSelect={setFile} selectedFile={file} />
@@ -132,33 +127,6 @@ export function MintForm() {
                 rows={3}
                 className="input-field resize-none"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">Initial Mint Amount</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min="1"
-                  placeholder="1"
-                  className="input-field"
-                />
-                <p className="text-xs text-slate-500 mt-1">Editions to mint now</p>
-              </div>
-              <div>
-                <label className="label">Max Supply</label>
-                <input
-                  type="number"
-                  value={maxSupply}
-                  onChange={(e) => setMaxSupply(e.target.value)}
-                  min="0"
-                  placeholder="0"
-                  className="input-field"
-                />
-                <p className="text-xs text-slate-500 mt-1">0 = unlimited</p>
-              </div>
             </div>
 
             {/* Attributes Section */}
@@ -220,7 +188,7 @@ export function MintForm() {
         {/* Contract Info Card */}
         {contractAddress && (
           <div className="card">
-            <h3 className="text-sm font-medium text-slate-400 mb-4">Contract Info</h3>
+            <h3 className="text-sm font-medium text-slate-400 mb-4">Collection Info</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 text-sm">Collection</span>
@@ -229,25 +197,33 @@ export function MintForm() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Token Types</span>
-                <span className="text-white font-medium">{totalTokenTypes?.toString() ?? '0'}</span>
+                <span className="text-slate-400 text-sm">Total NFTs</span>
+                <span className="text-white font-medium">{totalTokens?.toString() ?? '0'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-sm">Next Token ID</span>
+                <span className="text-primary-400 font-medium">#{nextTokenId?.toString() ?? '0'}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 text-sm">Mint Price</span>
                 <span className="text-white font-medium">
-                  {mintPrice ? `${formatEther(mintPrice)} ETH` : 'Free'}
+                  {mintPrice && mintPrice > 0n ? `${formatEther(mintPrice)} ETH` : 'Free'}
                 </span>
               </div>
+              {maxPerWallet && maxPerWallet > 0n && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 text-sm">Your Remaining</span>
+                  <span className="text-white font-medium">
+                    {remainingMints !== undefined && remainingMints < BigInt(2**200)
+                      ? remainingMints.toString()
+                      : 'Unlimited'}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Wallet Limit</span>
-                <span className="text-white font-medium">
-                  {maxPerWallet && maxPerWallet > 0n ? maxPerWallet.toString() : 'Unlimited'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Minting</span>
+                <span className="text-slate-400 text-sm">Status</span>
                 <span className={`font-medium ${mintingEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                  {mintingEnabled ? 'Enabled' : 'Disabled'}
+                  {mintingEnabled ? 'Open' : 'Closed'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -295,20 +271,15 @@ export function MintForm() {
             </div>
 
             <div className="p-4 border-t border-slate-700/50">
-              <h4 className="font-semibold text-white truncate">
-                {name || 'Untitled NFT'}
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-white truncate">
+                  {name || 'Untitled NFT'}
+                </h4>
+                <span className="text-primary-400 text-sm">#{nextTokenId?.toString() ?? '?'}</span>
+              </div>
               {description && (
                 <p className="text-slate-400 text-sm mt-1 line-clamp-2">{description}</p>
               )}
-              <div className="flex gap-4 mt-2 text-xs">
-                {parseInt(amount) > 1 && (
-                  <span className="text-primary-400">Mint: {amount}</span>
-                )}
-                {parseInt(maxSupply) > 0 && (
-                  <span className="text-slate-400">Max: {maxSupply}</span>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -317,7 +288,7 @@ export function MintForm() {
         <div className="card">
           {!isConnected ? (
             <div className="text-center py-4">
-              <p className="text-slate-400 mb-4">Connect your wallet to create NFTs</p>
+              <p className="text-slate-400 mb-4">Connect your wallet to mint your NFT</p>
             </div>
           ) : !contractAddress ? (
             <div className="text-center py-4">
@@ -331,24 +302,28 @@ export function MintForm() {
                 Deploy the contract and set VITE_NFT_CONTRACT_ADDRESS
               </p>
             </div>
-          ) : !isOwner ? (
+          ) : !mintingEnabled ? (
             <div className="text-center py-4">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <p className="text-slate-400 text-sm mb-2">Public minting coming soon</p>
-              <p className="text-slate-500 text-xs">
-                {remainingMints !== undefined && remainingMints < BigInt(2**256 - 1)
-                  ? `You can mint ${remainingMints.toString()} more`
-                  : 'Unlimited mints available'}
-              </p>
+              <p className="text-slate-400 text-sm">Minting is currently closed</p>
+            </div>
+          ) : !hasRemainingMints ? (
+            <div className="text-center py-4">
+              <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <p className="text-slate-400 text-sm">You've reached the wallet mint limit</p>
             </div>
           ) : (
             <>
               <button
-                onClick={handleCreateAndMint}
+                onClick={handleMint}
                 disabled={!canMint}
                 className="btn-primary w-full flex items-center justify-center gap-2"
               >
@@ -361,7 +336,7 @@ export function MintForm() {
                     <span>
                       {isUploading && 'Uploading to IPFS...'}
                       {isPending && 'Confirm in wallet...'}
-                      {isConfirming && 'Creating NFT...'}
+                      {isConfirming && 'Minting...'}
                     </span>
                   </>
                 ) : (
@@ -369,13 +344,15 @@ export function MintForm() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    Create & Mint NFT
+                    Mint NFT
                   </>
                 )}
               </button>
 
               <p className="text-center text-slate-500 text-xs mt-3">
-                Creates new token type + mints {amount} edition{parseInt(amount) > 1 ? 's' : ''}
+                {mintPrice && mintPrice > 0n
+                  ? `Price: ${formatEther(mintPrice)} ETH + gas`
+                  : 'Free (gas fees only)'}
               </p>
             </>
           )}
@@ -387,7 +364,7 @@ export function MintForm() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="font-medium">NFT Created Successfully!</span>
+                <span className="font-medium">NFT Minted Successfully!</span>
               </div>
               <a
                 href={getExplorerUrl(hash)}
@@ -401,7 +378,7 @@ export function MintForm() {
                 onClick={resetForm}
                 className="text-slate-400 hover:text-white text-sm underline"
               >
-                Create another NFT
+                Mint another NFT
               </button>
             </div>
           )}
