@@ -222,8 +222,8 @@ export function MintForm() {
               )}
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 text-sm">Status</span>
-                <span className={`font-medium ${mintingEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                  {mintingEnabled ? 'Open' : 'Closed'}
+                <span className={`font-medium ${mintingEnabled === undefined ? 'text-slate-400' : mintingEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                  {mintingEnabled === undefined ? 'Loading...' : mintingEnabled ? 'Open' : 'Closed'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
