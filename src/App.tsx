@@ -1,5 +1,6 @@
 import { Header } from './components/Header'
 import { MintForm } from './components/MintForm'
+import { AdminPanel } from './components/AdminPanel'
 
 function App() {
   return (
@@ -20,6 +21,9 @@ function App() {
 
         {/* Mint Form */}
         <MintForm />
+
+        {/* Admin Panel - Only visible to contract owner */}
+        <AdminPanel />
       </main>
 
       {/* Footer */}
