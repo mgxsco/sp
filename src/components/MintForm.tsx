@@ -210,7 +210,7 @@ export function MintForm() {
                   {mintPrice && mintPrice > 0n ? `${formatEther(mintPrice)} ETH` : 'Free'}
                 </span>
               </div>
-              {maxPerWallet && maxPerWallet > 0n && (
+              {maxPerWallet !== undefined && maxPerWallet > 0n && (
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 text-sm">Your Remaining</span>
                   <span className="text-white font-medium">
