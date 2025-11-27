@@ -1,115 +1,103 @@
-// ERC-721 NFT Contract ABI - Standard OpenZeppelin implementation
-export const NFT_CONTRACT_ABI = [
+// Manifold ERC1155Creator ABI - For minting on Manifold contracts
+// Contract: 0x8b0E7479FbBa239593F6B1D3a63945bC5399eA14 (Sepolia)
+export const MANIFOLD_ERC1155_ABI = [
+  // Mint new tokens with URIs (owner only)
   {
     inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'tokenURI', type: 'string' }
+      { name: 'to', type: 'address[]' },
+      { name: 'amounts', type: 'uint256[]' },
+      { name: 'uris', type: 'string[]' }
     ],
-    name: 'mintNFT',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'payable',
+    name: 'mintBaseNew',
+    outputs: [{ name: '', type: 'uint256[]' }],
+    stateMutability: 'nonpayable',
     type: 'function'
   },
+  // Mint existing token to addresses
   {
-    inputs: [],
-    name: 'mintPrice',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
+    inputs: [
+      { name: 'to', type: 'address[]' },
+      { name: 'tokenIds', type: 'uint256[]' },
+      { name: 'amounts', type: 'uint256[]' }
+    ],
+    name: 'mintBaseExisting',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function'
   },
-  {
-    inputs: [],
-    name: 'totalSupply',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
-  {
-    inputs: [],
-    name: 'maxSupply',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function'
-  },
+  // Get token URI
   {
     inputs: [{ name: 'tokenId', type: 'uint256' }],
-    name: 'tokenURI',
+    name: 'uri',
     outputs: [{ name: '', type: 'string' }],
     stateMutability: 'view',
     type: 'function'
   },
+  // Get balance of token for address
   {
-    inputs: [{ name: 'owner', type: 'address' }],
+    inputs: [
+      { name: 'account', type: 'address' },
+      { name: 'id', type: 'uint256' }
+    ],
     name: 'balanceOf',
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function'
   },
+  // Get total supply of a token
   {
     inputs: [{ name: 'tokenId', type: 'uint256' }],
-    name: 'ownerOf',
+    name: 'totalSupply',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  // Check if address is admin
+  {
+    inputs: [{ name: 'admin', type: 'address' }],
+    name: 'isAdmin',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  // Get contract owner
+  {
+    inputs: [],
+    name: 'owner',
     outputs: [{ name: '', type: 'address' }],
     stateMutability: 'view',
     type: 'function'
   },
+  // Get contract name
+  {
+    inputs: [],
+    name: 'name',
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  // Get contract symbol
+  {
+    inputs: [],
+    name: 'symbol',
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  // Transfer event (ERC1155)
   {
     anonymous: false,
     inputs: [
+      { indexed: true, name: 'operator', type: 'address' },
       { indexed: true, name: 'from', type: 'address' },
       { indexed: true, name: 'to', type: 'address' },
-      { indexed: true, name: 'tokenId', type: 'uint256' }
+      { indexed: false, name: 'id', type: 'uint256' },
+      { indexed: false, name: 'value', type: 'uint256' }
     ],
-    name: 'Transfer',
+    name: 'TransferSingle',
     type: 'event'
   }
 ] as const
 
-// Solidity source code for reference - Deploy this contract to your network
-export const NFT_CONTRACT_SOURCE = `
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract MintableNFT is ERC721, ERC721URIStorage, Ownable {
-    uint256 private _nextTokenId;
-    uint256 public mintPrice = 0.01 ether;
-    uint256 public maxSupply = 10000;
-
-    constructor() ERC721("MintableNFT", "MNFT") Ownable(msg.sender) {}
-
-    function mintNFT(address to, string memory uri) public payable returns (uint256) {
-        require(msg.value >= mintPrice, "Insufficient payment");
-        require(_nextTokenId < maxSupply, "Max supply reached");
-
-        uint256 tokenId = _nextTokenId++;
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        return tokenId;
-    }
-
-    function totalSupply() public view returns (uint256) {
-        return _nextTokenId;
-    }
-
-    function setMintPrice(uint256 _price) public onlyOwner {
-        mintPrice = _price;
-    }
-
-    function withdraw() public onlyOwner {
-        payable(owner()).transfer(address(this).balance);
-    }
-
-    // Required overrides
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(tokenId);
-    }
-
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-}
-`
+// Default contract address on Sepolia
+export const DEFAULT_CONTRACT_ADDRESS = '0x8b0E7479FbBa239593F6B1D3a63945bC5399eA14' as const

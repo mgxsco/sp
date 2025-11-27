@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useAccount } from 'wagmi'
-import { formatEther } from 'viem'
+import { useAccount, useChainId } from 'wagmi'
 import { FileUpload } from './FileUpload'
 import { useNFTMint } from '../hooks/useNFTMint'
 import { useIPFSUpload } from '../hooks/useIPFSUpload'
@@ -12,12 +11,14 @@ interface Attribute {
 
 export function MintForm() {
   const { address, isConnected } = useAccount()
+  const chainId = useChainId()
   const [file, setFile] = useState<File | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [attributes, setAttributes] = useState<Attribute[]>([])
   const [newTraitType, setNewTraitType] = useState('')
   const [newTraitValue, setNewTraitValue] = useState('')
+  const [amount, setAmount] = useState('1')
 
   const { uploadToIPFS, isUploading, error: uploadError } = useIPFSUpload()
   const {
@@ -27,10 +28,10 @@ export function MintForm() {
     isSuccess,
     error: mintError,
     hash,
-    mintPrice,
-    totalSupply,
-    maxSupply,
     contractAddress,
+    contractName,
+    contractSymbol,
+    canMint: hasPermission,
   } = useNFTMint()
 
   const addAttribute = () => {
@@ -55,14 +56,28 @@ export function MintForm() {
         attributes: attributes.length > 0 ? attributes : undefined,
       })
 
-      await mint(address, metadataUrl)
+      await mint(address, metadataUrl, BigInt(amount || '1'))
     } catch (err) {
       console.error('Minting failed:', err)
     }
   }
 
   const isLoading = isUploading || isPending || isConfirming
-  const canMint = isConnected && file && name && !isLoading
+  const canMint = isConnected && file && name && !isLoading && hasPermission
+
+  // Get block explorer URL based on chain
+  const getExplorerUrl = (txHash: string) => {
+    switch (chainId) {
+      case 11155111: // Sepolia
+        return `https://sepolia.etherscan.io/tx/${txHash}`
+      case 137: // Polygon
+        return `https://polygonscan.com/tx/${txHash}`
+      case 80002: // Polygon Amoy
+        return `https://amoy.polygonscan.com/tx/${txHash}`
+      default:
+        return `https://etherscan.io/tx/${txHash}`
+    }
+  }
 
   return (
     <div className="grid lg:grid-cols-2 gap-8">
@@ -94,6 +109,19 @@ export function MintForm() {
                 rows={3}
                 className="input-field resize-none"
               />
+            </div>
+
+            <div>
+              <label className="label">Edition Size</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min="1"
+                placeholder="1"
+                className="input-field"
+              />
+              <p className="text-xs text-slate-500 mt-1">Number of editions to mint (ERC-1155)</p>
             </div>
 
             {/* Attributes Section */}
@@ -152,28 +180,29 @@ export function MintForm() {
 
       {/* Right Column - Preview & Mint */}
       <div className="space-y-6">
-        {/* Stats Card */}
+        {/* Contract Info Card */}
         {contractAddress && (
           <div className="card">
-            <h3 className="text-sm font-medium text-slate-400 mb-4">Collection Stats</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-2xl font-bold text-white">
-                  {totalSupply?.toString() ?? '-'}
-                </p>
-                <p className="text-xs text-slate-400">Minted</p>
+            <h3 className="text-sm font-medium text-slate-400 mb-4">Contract Info</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-sm">Collection</span>
+                <span className="text-white font-medium">
+                  {contractName || 'Loading...'} {contractSymbol && `(${contractSymbol})`}
+                </span>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-white">
-                  {maxSupply?.toString() ?? '-'}
-                </p>
-                <p className="text-xs text-slate-400">Max Supply</p>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-sm">Type</span>
+                <span className="text-primary-400 font-medium">ERC-1155 (Manifold)</span>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-white">
-                  {mintPrice ? formatEther(mintPrice) : '-'} ETH
-                </p>
-                <p className="text-xs text-slate-400">Mint Price</p>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-sm">Network</span>
+                <span className="text-white font-medium">
+                  {chainId === 11155111 ? 'Sepolia Testnet' : chainId === 1 ? 'Ethereum' : chainId === 137 ? 'Polygon' : 'Unknown'}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-700">
+                <p className="text-xs text-slate-500 font-mono break-all">{contractAddress}</p>
               </div>
             </div>
           </div>
@@ -210,6 +239,9 @@ export function MintForm() {
               {description && (
                 <p className="text-slate-400 text-sm mt-1 line-clamp-2">{description}</p>
               )}
+              {parseInt(amount) > 1 && (
+                <p className="text-primary-400 text-xs mt-2">Edition of {amount}</p>
+              )}
             </div>
           </div>
         </div>
@@ -220,15 +252,15 @@ export function MintForm() {
             <div className="text-center py-4">
               <p className="text-slate-400 mb-4">Connect your wallet to mint NFTs</p>
             </div>
-          ) : !contractAddress ? (
+          ) : !hasPermission ? (
             <div className="text-center py-4">
               <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
               <p className="text-slate-400 text-sm">
-                No contract configured. Set VITE_NFT_CONTRACT_ADDRESS in your .env file.
+                Only the contract owner or admins can mint. Connect with an authorized wallet.
               </p>
             </div>
           ) : (
@@ -260,11 +292,9 @@ export function MintForm() {
                 )}
               </button>
 
-              {mintPrice && (
-                <p className="text-center text-slate-400 text-sm mt-3">
-                  Price: {formatEther(mintPrice)} ETH + gas
-                </p>
-              )}
+              <p className="text-center text-slate-500 text-xs mt-3">
+                Free mint (gas fees only)
+              </p>
             </>
           )}
 
@@ -278,12 +308,12 @@ export function MintForm() {
                 <span className="font-medium">NFT Minted Successfully!</span>
               </div>
               <a
-                href={`https://etherscan.io/tx/${hash}`}
+                href={getExplorerUrl(hash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-400 hover:text-primary-300 text-sm underline"
               >
-                View transaction on Etherscan
+                View transaction on explorer
               </a>
             </div>
           )}
