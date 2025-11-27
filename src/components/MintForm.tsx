@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAccount, useChainId } from 'wagmi'
+import { formatEther } from 'viem'
 import { FileUpload } from './FileUpload'
 import { useNFTMint } from '../hooks/useNFTMint'
 import { useIPFSUpload } from '../hooks/useIPFSUpload'
@@ -19,19 +20,26 @@ export function MintForm() {
   const [newTraitType, setNewTraitType] = useState('')
   const [newTraitValue, setNewTraitValue] = useState('')
   const [amount, setAmount] = useState('1')
+  const [maxSupply, setMaxSupply] = useState('0')
 
   const { uploadToIPFS, isUploading, error: uploadError } = useIPFSUpload()
   const {
-    mint,
+    createAndMint,
     isPending,
     isConfirming,
     isSuccess,
     error: mintError,
     hash,
+    reset,
     contractAddress,
     contractName,
     contractSymbol,
-    canMint: hasPermission,
+    mintPrice,
+    maxPerWallet,
+    mintingEnabled,
+    totalTokenTypes,
+    remainingMints,
+    isOwner,
   } = useNFTMint()
 
   const addAttribute = () => {
@@ -46,7 +54,7 @@ export function MintForm() {
     setAttributes(attributes.filter((_, i) => i !== index))
   }
 
-  const handleMint = async () => {
+  const handleCreateAndMint = async () => {
     if (!file || !name || !address) return
 
     try {
@@ -56,23 +64,38 @@ export function MintForm() {
         attributes: attributes.length > 0 ? attributes : undefined,
       })
 
-      await mint(address, metadataUrl, BigInt(amount || '1'))
+      await createAndMint(
+        address,
+        metadataUrl,
+        BigInt(maxSupply || '0'),
+        BigInt(amount || '1')
+      )
     } catch (err) {
       console.error('Minting failed:', err)
     }
   }
 
+  const resetForm = () => {
+    setFile(null)
+    setName('')
+    setDescription('')
+    setAttributes([])
+    setAmount('1')
+    setMaxSupply('0')
+    reset()
+  }
+
   const isLoading = isUploading || isPending || isConfirming
-  const canMint = isConnected && file && name && !isLoading && hasPermission
+  const canMint = isConnected && file && name && !isLoading && isOwner && contractAddress
 
   // Get block explorer URL based on chain
   const getExplorerUrl = (txHash: string) => {
     switch (chainId) {
-      case 11155111: // Sepolia
+      case 11155111:
         return `https://sepolia.etherscan.io/tx/${txHash}`
-      case 137: // Polygon
+      case 137:
         return `https://polygonscan.com/tx/${txHash}`
-      case 80002: // Polygon Amoy
+      case 80002:
         return `https://amoy.polygonscan.com/tx/${txHash}`
       default:
         return `https://etherscan.io/tx/${txHash}`
@@ -84,7 +107,7 @@ export function MintForm() {
       {/* Left Column - Form */}
       <div className="space-y-6">
         <div className="card">
-          <h2 className="text-lg font-semibold text-white mb-6">Create Your NFT</h2>
+          <h2 className="text-lg font-semibold text-white mb-6">Create New NFT</h2>
 
           <div className="space-y-6">
             <FileUpload onFileSelect={setFile} selectedFile={file} />
@@ -111,17 +134,31 @@ export function MintForm() {
               />
             </div>
 
-            <div>
-              <label className="label">Edition Size</label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="1"
-                placeholder="1"
-                className="input-field"
-              />
-              <p className="text-xs text-slate-500 mt-1">Number of editions to mint (ERC-1155)</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Initial Mint Amount</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="1"
+                  placeholder="1"
+                  className="input-field"
+                />
+                <p className="text-xs text-slate-500 mt-1">Editions to mint now</p>
+              </div>
+              <div>
+                <label className="label">Max Supply</label>
+                <input
+                  type="number"
+                  value={maxSupply}
+                  onChange={(e) => setMaxSupply(e.target.value)}
+                  min="0"
+                  placeholder="0"
+                  className="input-field"
+                />
+                <p className="text-xs text-slate-500 mt-1">0 = unlimited</p>
+              </div>
             </div>
 
             {/* Attributes Section */}
@@ -155,14 +192,14 @@ export function MintForm() {
                   type="text"
                   value={newTraitType}
                   onChange={(e) => setNewTraitType(e.target.value)}
-                  placeholder="Trait type (e.g., Color)"
+                  placeholder="Trait type (e.g., Artist)"
                   className="input-field flex-1"
                 />
                 <input
                   type="text"
                   value={newTraitValue}
                   onChange={(e) => setNewTraitValue(e.target.value)}
-                  placeholder="Value (e.g., Blue)"
+                  placeholder="Value (e.g., Name)"
                   className="input-field flex-1"
                 />
                 <button
@@ -192,18 +229,43 @@ export function MintForm() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Type</span>
-                <span className="text-primary-400 font-medium">ERC-1155 (Manifold)</span>
+                <span className="text-slate-400 text-sm">Token Types</span>
+                <span className="text-white font-medium">{totalTokenTypes?.toString() ?? '0'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-sm">Mint Price</span>
+                <span className="text-white font-medium">
+                  {mintPrice ? `${formatEther(mintPrice)} ETH` : 'Free'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-sm">Wallet Limit</span>
+                <span className="text-white font-medium">
+                  {maxPerWallet && maxPerWallet > 0n ? maxPerWallet.toString() : 'Unlimited'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-sm">Minting</span>
+                <span className={`font-medium ${mintingEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                  {mintingEnabled ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 text-sm">Network</span>
                 <span className="text-white font-medium">
-                  {chainId === 11155111 ? 'Sepolia Testnet' : chainId === 1 ? 'Ethereum' : chainId === 137 ? 'Polygon' : 'Unknown'}
+                  {chainId === 11155111 ? 'Sepolia' : chainId === 1 ? 'Ethereum' : chainId === 137 ? 'Polygon' : 'Unknown'}
                 </span>
               </div>
-              <div className="pt-2 border-t border-slate-700">
-                <p className="text-xs text-slate-500 font-mono break-all">{contractAddress}</p>
-              </div>
+              {isOwner && (
+                <div className="pt-2 border-t border-slate-700">
+                  <span className="text-xs text-green-400 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    You are the contract owner
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -239,9 +301,14 @@ export function MintForm() {
               {description && (
                 <p className="text-slate-400 text-sm mt-1 line-clamp-2">{description}</p>
               )}
-              {parseInt(amount) > 1 && (
-                <p className="text-primary-400 text-xs mt-2">Edition of {amount}</p>
-              )}
+              <div className="flex gap-4 mt-2 text-xs">
+                {parseInt(amount) > 1 && (
+                  <span className="text-primary-400">Mint: {amount}</span>
+                )}
+                {parseInt(maxSupply) > 0 && (
+                  <span className="text-slate-400">Max: {maxSupply}</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -250,23 +317,38 @@ export function MintForm() {
         <div className="card">
           {!isConnected ? (
             <div className="text-center py-4">
-              <p className="text-slate-400 mb-4">Connect your wallet to mint NFTs</p>
+              <p className="text-slate-400 mb-4">Connect your wallet to create NFTs</p>
             </div>
-          ) : !hasPermission ? (
+          ) : !contractAddress ? (
             <div className="text-center py-4">
               <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
-              <p className="text-slate-400 text-sm">
-                Only the contract owner or admins can mint. Connect with an authorized wallet.
+              <p className="text-slate-400 text-sm mb-2">No contract configured</p>
+              <p className="text-slate-500 text-xs">
+                Deploy the contract and set VITE_NFT_CONTRACT_ADDRESS
+              </p>
+            </div>
+          ) : !isOwner ? (
+            <div className="text-center py-4">
+              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-slate-400 text-sm mb-2">Public minting coming soon</p>
+              <p className="text-slate-500 text-xs">
+                {remainingMints !== undefined && remainingMints < BigInt(2**256 - 1)
+                  ? `You can mint ${remainingMints.toString()} more`
+                  : 'Unlimited mints available'}
               </p>
             </div>
           ) : (
             <>
               <button
-                onClick={handleMint}
+                onClick={handleCreateAndMint}
                 disabled={!canMint}
                 className="btn-primary w-full flex items-center justify-center gap-2"
               >
@@ -279,7 +361,7 @@ export function MintForm() {
                     <span>
                       {isUploading && 'Uploading to IPFS...'}
                       {isPending && 'Confirm in wallet...'}
-                      {isConfirming && 'Minting...'}
+                      {isConfirming && 'Creating NFT...'}
                     </span>
                   </>
                 ) : (
@@ -287,13 +369,13 @@ export function MintForm() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    Mint NFT
+                    Create & Mint NFT
                   </>
                 )}
               </button>
 
               <p className="text-center text-slate-500 text-xs mt-3">
-                Free mint (gas fees only)
+                Creates new token type + mints {amount} edition{parseInt(amount) > 1 ? 's' : ''}
               </p>
             </>
           )}
@@ -305,16 +387,22 @@ export function MintForm() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="font-medium">NFT Minted Successfully!</span>
+                <span className="font-medium">NFT Created Successfully!</span>
               </div>
               <a
                 href={getExplorerUrl(hash)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-400 hover:text-primary-300 text-sm underline"
+                className="text-primary-400 hover:text-primary-300 text-sm underline block mb-2"
               >
                 View transaction on explorer
               </a>
+              <button
+                onClick={resetForm}
+                className="text-slate-400 hover:text-white text-sm underline"
+              >
+                Create another NFT
+              </button>
             </div>
           )}
 
