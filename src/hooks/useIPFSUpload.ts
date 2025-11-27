@@ -1,13 +1,26 @@
 import { useState } from 'react'
 
+interface NFTAttribute {
+  trait_type: string
+  value: string | number
+  display_type?: string
+}
+
+interface ImageDetails {
+  bytes: number
+  format: string
+  sha256: string
+  width: number
+  height: number
+}
+
 interface NFTMetadata {
   name: string
-  description: string
+  description?: string
+  attributes?: NFTAttribute[]
+  image_details: ImageDetails
   image: string
-  attributes?: Array<{
-    trait_type: string
-    value: string | number
-  }>
+  image_url: string
 }
 
 interface UploadResult {
@@ -31,13 +44,64 @@ function getFileExtension(file: File): string {
   return ext || 'png'
 }
 
+// Get format name from extension
+function getFormatName(extension: string): string {
+  const formats: Record<string, string> = {
+    'png': 'PNG',
+    'jpg': 'JPEG',
+    'jpeg': 'JPEG',
+    'gif': 'GIF',
+    'webp': 'WEBP',
+    'svg': 'SVG',
+    'mp4': 'MP4',
+    'webm': 'WEBM',
+    'mp3': 'MP3',
+    'wav': 'WAV',
+  }
+  return formats[extension] || extension.toUpperCase()
+}
+
+// Calculate SHA256 hash of file
+async function calculateSHA256(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// Get image dimensions
+function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    // For non-image files, return 0x0
+    if (!file.type.startsWith('image/')) {
+      resolve({ width: 0, height: 0 })
+      return
+    }
+
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load image for dimensions'))
+    }
+
+    img.src = url
+  })
+}
+
 export function useIPFSUpload() {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const uploadToIPFS = async (
     file: File,
-    metadata: Omit<NFTMetadata, 'image'>
+    metadata: { name: string; description?: string; attributes?: NFTAttribute[] }
   ): Promise<UploadResult> => {
     setIsUploading(true)
     setError(null)
@@ -55,6 +119,12 @@ export function useIPFSUpload() {
       const fileExtension = getFileExtension(file)
       const imageName = `${slug}.${fileExtension}`
       const metadataName = `${slug}-metadata.json`
+
+      // Calculate image details in parallel
+      const [sha256, dimensions] = await Promise.all([
+        calculateSHA256(file),
+        getImageDimensions(file),
+      ])
 
       // Create a new file with proper name
       const renamedFile = new File([file], imageName, { type: file.type })
@@ -91,14 +161,36 @@ export function useIPFSUpload() {
       }
 
       const imageResult = await imageResponse.json()
-      const imageUrl = `ipfs://${imageResult.IpfsHash}`
+      const ipfsHash = imageResult.IpfsHash
+      const imageUrl = `ipfs://${ipfsHash}`
+      const imageHttpUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
 
-      // Create and upload metadata with proper naming
+      // Build image_details
+      const imageDetails: ImageDetails = {
+        bytes: file.size,
+        format: getFormatName(fileExtension),
+        sha256: sha256,
+        width: dimensions.width,
+        height: dimensions.height,
+      }
+
+      // Build attributes with display_type
+      const attributesWithDisplayType = metadata.attributes?.map(attr => ({
+        trait_type: attr.trait_type,
+        value: attr.value,
+        display_type: attr.display_type || 'text',
+      }))
+
+      // Create full metadata matching the required structure
       const fullMetadata: NFTMetadata = {
         name: metadata.name,
-        description: metadata.description || '',
-        image: imageUrl,
-        attributes: metadata.attributes,
+        ...(metadata.description && { description: metadata.description }),
+        ...(attributesWithDisplayType && attributesWithDisplayType.length > 0 && {
+          attributes: attributesWithDisplayType
+        }),
+        image_details: imageDetails,
+        image: imageHttpUrl,
+        image_url: imageHttpUrl,
       }
 
       const metadataResponse = await fetch(
