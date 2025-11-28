@@ -80,6 +80,7 @@ export function Header({ activeTab, setActiveTab, isOwner }: HeaderProps) {
                     userSelect: 'none',
                   },
                 })}
+                className="flex items-center gap-3"
               >
                 {(() => {
                   if (!connected) {
@@ -105,12 +106,23 @@ export function Header({ activeTab, setActiveTab, isOwner }: HeaderProps) {
                   }
 
                   return (
-                    <button
-                      onClick={openAccountModal}
-                      className="font-tomorrow text-[11px] tracking-[0.15em] text-black/60 hover:text-black transition-colors"
-                    >
-                      {account.displayName}
-                    </button>
+                    <>
+                      {/* Chain selector - only for admin */}
+                      {isOwner && (
+                        <button
+                          onClick={openChainModal}
+                          className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 hover:text-black transition-colors uppercase"
+                        >
+                          {chain.name}
+                        </button>
+                      )}
+                      <button
+                        onClick={openAccountModal}
+                        className="font-tomorrow text-[11px] tracking-[0.15em] text-black/60 hover:text-black transition-colors"
+                      >
+                        {account.displayName}
+                      </button>
+                    </>
                   )
                 })()}
               </div>
