@@ -30,12 +30,9 @@ export function MintForm() {
     hash,
     reset,
     contractAddress,
-    contractName,
     mintPrice,
-    maxPerWallet,
     mintingEnabled,
     totalTokens,
-    nextTokenId,
     remainingMints,
   } = useNFTMint()
 
@@ -92,27 +89,10 @@ export function MintForm() {
     }
   }
 
-  const getNetworkName = () => {
-    switch (chainId) {
-      case 11155111:
-        return 'Sepolia'
-      case 1:
-        return 'Ethereum'
-      case 137:
-        return 'Polygon'
-      case 80002:
-        return 'Amoy'
-      default:
-        return 'Unknown'
-    }
-  }
-
   return (
-    <div className="space-y-8">
-      {/* File Upload */}
+    <div className="space-y-6">
       <FileUpload onFileSelect={setFile} selectedFile={file} />
 
-      {/* Title */}
       <div>
         <label className="label">Title</label>
         <input
@@ -120,11 +100,10 @@ export function MintForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter title"
-          className="input-field font-tektur"
+          className="input-field"
         />
       </div>
 
-      {/* Description */}
       <div>
         <label className="label">Description</label>
         <textarea
@@ -132,20 +111,19 @@ export function MintForm() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional"
           rows={2}
-          className="input-field font-tektur resize-none"
+          className="input-field resize-none"
         />
       </div>
 
-      {/* Attributes */}
       <div>
         <label className="label">Attributes</label>
         {attributes.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-3 bg-[#f5f5f5] p-3">
             {attributes.map((attr, index) => (
-              <div key={index} className="flex items-center justify-between py-3 border-b border-black/10">
-                <div className="flex gap-4">
-                  <span className="font-tektur text-black/50 text-sm">{attr.trait_type}</span>
-                  <span className="font-tektur text-black text-sm">{attr.value}</span>
+              <div key={index} className="flex items-center justify-between py-2">
+                <div className="flex gap-3 text-sm">
+                  <span className="text-black/50">{attr.trait_type}:</span>
+                  <span className="text-black">{attr.value}</span>
                 </div>
                 <button
                   onClick={() => removeAttribute(index)}
@@ -157,91 +135,86 @@ export function MintForm() {
             ))}
           </div>
         )}
-        <div className="flex gap-4 items-end">
+        <div className="flex gap-3">
           <input
             type="text"
             value={newTraitType}
             onChange={(e) => setNewTraitType(e.target.value)}
             placeholder="Trait"
-            className="input-field font-tektur flex-1"
+            className="input-field flex-1"
           />
           <input
             type="text"
             value={newTraitValue}
             onChange={(e) => setNewTraitValue(e.target.value)}
             placeholder="Value"
-            className="input-field font-tektur flex-1"
+            className="input-field flex-1"
           />
           <button
             onClick={addAttribute}
             disabled={!newTraitType || !newTraitValue}
-            className="font-tomorrow text-[10px] tracking-[0.2em] text-black/40 hover:text-black disabled:opacity-20 uppercase pb-4"
+            className="btn-secondary px-4"
           >
             Add
           </button>
         </div>
       </div>
 
-      {/* Collection Info */}
       {contractAddress && (
-        <div className="pt-4 border-t border-black/10">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Minted</p>
-              <p className="font-tektur text-black">{totalTokens?.toString() ?? '0'}</p>
-            </div>
-            <div>
-              <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Price</p>
-              <p className="font-tektur text-black">
-                {mintPrice && mintPrice > 0n ? `${formatEther(mintPrice)}` : 'Free'}
-              </p>
-            </div>
-            <div>
-              <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Status</p>
-              <p className="font-tektur text-black">
-                {mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed'}
-              </p>
-            </div>
+        <div className="flex gap-6 text-center py-4 border-t border-black/10">
+          <div className="flex-1">
+            <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">Minted</p>
+            <p className="font-tektur text-black mt-1">{totalTokens?.toString() ?? '0'}</p>
+          </div>
+          <div className="flex-1">
+            <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">Price</p>
+            <p className="font-tektur text-black mt-1">
+              {mintPrice && mintPrice > 0n ? `${formatEther(mintPrice)} ETH` : 'Free'}
+            </p>
+          </div>
+          <div className="flex-1">
+            <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">Status</p>
+            <p className="font-tektur text-black mt-1">
+              {mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed'}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Mint Button */}
-      <div className="pt-4">
+      <div>
         {!isConnected ? (
-          <p className="font-tektur text-black/40 text-sm text-center">Connect wallet to mint</p>
+          <p className="text-black/40 text-sm text-center py-4">Connect wallet to mint</p>
         ) : !contractAddress ? (
-          <p className="font-tektur text-black/40 text-sm text-center">No contract configured</p>
+          <p className="text-black/40 text-sm text-center py-4">No contract configured</p>
         ) : !mintingEnabled ? (
-          <p className="font-tektur text-black/40 text-sm text-center">Minting is closed</p>
+          <p className="text-black/40 text-sm text-center py-4">Minting is closed</p>
         ) : !hasRemainingMints ? (
-          <p className="font-tektur text-black/40 text-sm text-center">Wallet limit reached</p>
+          <p className="text-black/40 text-sm text-center py-4">Wallet limit reached</p>
         ) : (
           <>
             <button onClick={handleMint} disabled={!canMint} className="btn-primary w-full">
               {isLoading ? (
-                <span>
+                <>
                   {isUploading && 'Uploading...'}
                   {isPending && 'Confirm in Wallet...'}
                   {isConfirming && 'Minting...'}
-                </span>
+                </>
               ) : (
                 'Mint'
               )}
             </button>
-            <p className="font-tektur text-black/30 text-[10px] mt-4 text-center">
+            <p className="text-black/30 text-[10px] mt-3 text-center">
               {mintPrice && mintPrice > 0n ? `${formatEther(mintPrice)} ETH + gas` : 'Gas fees only'}
             </p>
           </>
         )}
 
-        {/* Success */}
         {isSuccess && hash && (
-          <div className="mt-8 pt-6 border-t border-black/10 text-center">
-            <p className="font-tomorrow text-[10px] tracking-[0.2em] text-black uppercase mb-4">
+          <div className="mt-6 pt-4 border-t border-black/10 text-center">
+            <p className="font-tomorrow text-[10px] tracking-[0.2em] text-black uppercase mb-3">
               Minted Successfully
             </p>
-            <div className="flex justify-center gap-6">
+            <div className="flex justify-center gap-4">
               <a
                 href={getExplorerUrl(hash)}
                 target="_blank"
@@ -260,12 +233,9 @@ export function MintForm() {
           </div>
         )}
 
-        {/* Error */}
         {(uploadError || mintError) && (
-          <div className="mt-6 pt-4 border-t border-black/10">
-            <p className="font-tektur text-red-600 text-sm text-center">
-              {uploadError || (mintError as Error)?.message || 'An error occurred'}
-            </p>
+          <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm">
+            {uploadError || (mintError as Error)?.message || 'An error occurred'}
           </div>
         )}
       </div>

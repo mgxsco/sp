@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        lime: '#E6FF00',
+        yellow: '#DFFF00',
         black: '#000000',
       },
       fontFamily: {

@@ -93,22 +93,22 @@ export function AdminPanel() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 text-center pb-6 border-b border-black/10">
-        <div>
-          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Minted</p>
-          <p className="font-tektur text-black">{totalTokens?.toString() ?? '0'}</p>
+      <div className="flex gap-6 text-center pb-4 border-b border-black/10">
+        <div className="flex-1">
+          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">Minted</p>
+          <p className="font-tektur text-black mt-1">{totalTokens?.toString() ?? '0'}</p>
         </div>
-        <div>
-          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Balance</p>
-          <p className="font-tektur text-black">
-            {contractBalance ? `${parseFloat(formatEther(contractBalance.value)).toFixed(4)}` : '0'}
+        <div className="flex-1">
+          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">Balance</p>
+          <p className="font-tektur text-black mt-1">
+            {contractBalance ? `${parseFloat(formatEther(contractBalance.value)).toFixed(4)} ETH` : '0 ETH'}
           </p>
         </div>
-        <div>
-          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Status</p>
-          <p className="font-tektur text-black">
+        <div className="flex-1">
+          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">Status</p>
+          <p className="font-tektur text-black mt-1">
             {mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed'}
           </p>
         </div>
@@ -117,18 +117,18 @@ export function AdminPanel() {
       {/* Mint Price */}
       <div>
         <label className="label">Mint Price (ETH)</label>
-        <div className="flex gap-4 items-end">
+        <div className="flex gap-3">
           <input
             type="text"
             value={newPrice}
             onChange={(e) => setNewPrice(e.target.value)}
             placeholder="0.00"
-            className="input-field font-tektur flex-1"
+            className="input-field flex-1"
           />
           <button
             onClick={handleSetPrice}
             disabled={isLoading || !newPrice}
-            className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 uppercase pb-4"
+            className="btn-secondary px-6"
           >
             {activeAction === 'price' && isLoading ? '...' : 'Set'}
           </button>
@@ -138,19 +138,19 @@ export function AdminPanel() {
       {/* Max Per Wallet */}
       <div>
         <label className="label">Max Per Wallet</label>
-        <div className="flex gap-4 items-end">
+        <div className="flex gap-3">
           <input
             type="number"
             value={newMaxPerWallet}
             onChange={(e) => setNewMaxPerWallet(e.target.value)}
             placeholder="0 = unlimited"
             min="0"
-            className="input-field font-tektur flex-1"
+            className="input-field flex-1"
           />
           <button
             onClick={handleSetMaxPerWallet}
             disabled={isLoading}
-            className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 uppercase pb-4"
+            className="btn-secondary px-6"
           >
             {activeAction === 'maxWallet' && isLoading ? '...' : 'Set'}
           </button>
@@ -163,7 +163,7 @@ export function AdminPanel() {
         <button
           onClick={handleToggleMinting}
           disabled={isLoading || mintingEnabled === undefined}
-          className={`btn-secondary w-full ${mintingEnabled ? 'hover:border-red-500 hover:text-red-500' : 'hover:border-green-600 hover:text-green-600'}`}
+          className="btn-secondary w-full"
         >
           {activeAction === 'minting' && isLoading
             ? 'Updating...'
@@ -187,12 +187,12 @@ export function AdminPanel() {
       </div>
 
       {/* Contract Address */}
-      <div className="text-center pt-4">
+      <div className="text-center pt-2">
         <a
           href={`https://sepolia.etherscan.io/address/${contractAddress}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-tektur text-black/40 hover:text-black text-xs"
+          className="text-black/40 hover:text-black text-xs transition-colors"
         >
           {contractAddress?.slice(0, 6)}...{contractAddress?.slice(-4)}
         </a>
@@ -206,9 +206,9 @@ export function AdminPanel() {
       )}
 
       {error && (
-        <p className="font-tektur text-red-600 text-sm text-center">
+        <div className="p-3 bg-red-50 text-red-600 text-sm">
           {(error as Error)?.message || 'Transaction failed'}
-        </p>
+        </div>
       )}
     </div>
   )

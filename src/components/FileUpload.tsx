@@ -48,22 +48,19 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
         <div
           {...getRootProps()}
           className={`
-            relative border cursor-pointer
-            transition-all duration-500 aspect-square
+            bg-[#1a1a1a] cursor-pointer
+            transition-all duration-200
+            aspect-[4/3] max-w-[320px]
             flex flex-col items-center justify-center
-            ${
-              isDragActive
-                ? 'border-black bg-black/5'
-                : 'border-black/20 hover:border-black/50'
-            }
+            ${isDragActive ? 'opacity-80' : 'hover:opacity-90'}
           `}
         >
           <input {...getInputProps()} />
 
           <div className="text-center">
-            <div className="mb-8">
+            <div className="mb-4">
               <svg
-                className="w-6 h-6 text-black/40 mx-auto"
+                className="w-8 h-8 text-white/40 mx-auto"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -78,25 +75,20 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
             </div>
 
             {isDragActive ? (
-              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-black uppercase">
+              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-white uppercase">
                 Drop Here
               </p>
             ) : (
-              <>
-                <p className="font-tomorrow text-[10px] tracking-[0.2em] text-black/60 uppercase mb-2">
-                  Drag & Drop
-                </p>
-                <p className="font-tektur text-[10px] text-black/40">
-                  or click to browse
-                </p>
-              </>
+              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-white/60 uppercase">
+                Load Image
+              </p>
             )}
           </div>
         </div>
       ) : (
-        <div className="relative">
+        <div>
           {preview && (
-            <div className="aspect-square bg-white/50 flex items-center justify-center border border-black/10">
+            <div className="bg-[#1a1a1a] max-w-[320px] aspect-[4/3] flex items-center justify-center">
               <img
                 src={preview}
                 alt="Preview"
@@ -105,19 +97,19 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
             </div>
           )}
 
-          <div className="mt-6 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between max-w-[320px]">
             <div>
-              <p className="font-tektur text-black/80 text-sm truncate max-w-[200px]">
+              <p className="text-black/80 text-sm truncate max-w-[200px]">
                 {selectedFile.name}
               </p>
-              <p className="font-tektur text-black/40 text-[10px] mt-1">
+              <p className="text-black/40 text-[10px] mt-1">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
             </div>
 
             <button
               onClick={clearFile}
-              className="font-tomorrow text-[10px] tracking-[0.2em] text-black/40 hover:text-black transition-colors duration-300 uppercase"
+              className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 hover:text-black transition-colors uppercase"
             >
               Remove
             </button>
