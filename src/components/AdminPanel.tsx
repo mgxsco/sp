@@ -266,6 +266,57 @@ export function AdminPanel() {
     setActivationError(null)
   }
 
+  // Track which chain is being toggled
+  const [togglingChain, setTogglingChain] = useState<ChainId | null>(null)
+  const [toggleStatus, setToggleStatus] = useState<'switching' | 'signing' | 'confirming' | null>(null)
+
+  // Handle toggling minting on a single chain (without affecting others)
+  const handleToggleChainMinting = async (chainId: ChainId, enable: boolean) => {
+    const chainContract = getContractAddress(chainId)
+    if (!chainContract) return
+
+    setTogglingChain(chainId)
+    setActivationError(null)
+
+    try {
+      // Switch to the target chain if needed
+      if (walletChainId !== chainId) {
+        setToggleStatus('switching')
+        await switchChainAsync({ chainId })
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+
+      setToggleStatus('signing')
+
+      // Execute the transaction
+      await writeContractAsync({
+        address: chainContract,
+        abi: PUBLIC_MINT_ERC1155_ABI,
+        functionName: 'setMintingEnabled',
+        args: [enable],
+        chainId: chainId,
+      })
+
+      setToggleStatus('confirming')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Update active chain in context if enabling
+      if (enable) {
+        setActiveChainId(chainId)
+      }
+
+      // Refetch minting status
+      setTimeout(refetchAll, 1000)
+
+    } catch (err) {
+      console.error(`Failed to ${enable ? 'enable' : 'disable'} minting on chain ${chainId}:`, err)
+      setActivationError(`Failed to ${enable ? 'enable' : 'disable'} minting on ${CHAIN_NAMES[chainId]}`)
+    } finally {
+      setTogglingChain(null)
+      setToggleStatus(null)
+    }
+  }
+
   if (!isOwnerOnAnyChain) return null
 
   const isLoading = isPending || isConfirming
@@ -326,11 +377,11 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Chain Activation Section */}
+      {/* Chain Minting Controls */}
       <div>
-        <label className="label">Activate Minting on Chain</label>
+        <label className="label">Chain Minting Control</label>
         <p className="text-black/40 text-xs mb-3">
-          Select a chain to activate minting. This will enable minting on the selected chain and disable it on all others.
+          Toggle minting on/off for each chain. Signing a transaction is required for each change.
         </p>
 
         {/* Activation in progress */}
@@ -374,13 +425,13 @@ export function AdminPanel() {
             {AVAILABLE_CHAINS.map((chainId) => {
               const chainContract = getContractAddress(chainId)
               const isEnabled = mintingStatusByChain[chainId]
-              const isActive = isEnabled === true
+              const isToggling = togglingChain === chainId
 
               return (
                 <div
                   key={chainId}
                   className={`flex items-center justify-between p-3 border ${
-                    isActive ? 'border-green-500 bg-green-50' : 'border-black/10'
+                    isEnabled ? 'border-green-500 bg-green-50' : 'border-black/10'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -398,27 +449,40 @@ export function AdminPanel() {
                       </a>
                     )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-[10px] uppercase tracking-wider ${
-                      !chainContract ? 'text-black/20' :
-                      isEnabled === undefined ? 'text-black/30' :
-                      isEnabled ? 'text-green-600' : 'text-black/40'
-                    }`}>
-                      {!chainContract ? 'No contract' :
-                       isEnabled === undefined ? '...' :
-                       isEnabled ? 'Active' : 'Inactive'}
-                    </span>
-                    {chainContract && !isActive && (
-                      <button
-                        onClick={() => handleActivateChain(chainId)}
-                        disabled={isActivating}
-                        className="btn-secondary text-[10px] py-1 px-3"
-                      >
-                        Activate
-                      </button>
-                    )}
-                    {isActive && (
-                      <span className="text-green-600 text-xs">●</span>
+                  <div className="flex items-center gap-2">
+                    {!chainContract ? (
+                      <span className="text-[10px] text-black/20 uppercase tracking-wider">No contract</span>
+                    ) : isToggling ? (
+                      <span className="text-[10px] text-black/60 uppercase tracking-wider">
+                        {toggleStatus === 'switching' ? 'Switching...' :
+                         toggleStatus === 'signing' ? 'Sign tx...' :
+                         toggleStatus === 'confirming' ? 'Confirming...' : '...'}
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleToggleChainMinting(chainId, true)}
+                          disabled={isEnabled === true || isToggling || togglingChain !== null}
+                          className={`font-tomorrow text-[10px] tracking-[0.1em] uppercase py-1 px-3 transition-colors ${
+                            isEnabled === true
+                              ? 'bg-green-600 text-white'
+                              : 'border border-black/20 text-black/40 hover:border-green-500 hover:text-green-600'
+                          } ${(isToggling || togglingChain !== null) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          On
+                        </button>
+                        <button
+                          onClick={() => handleToggleChainMinting(chainId, false)}
+                          disabled={isEnabled === false || isEnabled === undefined || isToggling || togglingChain !== null}
+                          className={`font-tomorrow text-[10px] tracking-[0.1em] uppercase py-1 px-3 transition-colors ${
+                            isEnabled === false
+                              ? 'bg-black text-white'
+                              : 'border border-black/20 text-black/40 hover:border-black hover:text-black'
+                          } ${(isToggling || togglingChain !== null) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          Off
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
