@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Header } from './components/Header'
 import { MintForm } from './components/MintForm'
 import { AdminPanel } from './components/AdminPanel'
+import { Gallery } from './components/Gallery'
 import { useNFTMint } from './hooks/useNFTMint'
 
-type Tab = 'mint' | 'admin'
+type Tab = 'mint' | 'gallery' | 'admin'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('mint')
@@ -17,6 +18,7 @@ function App() {
       <main className="flex-1 max-w-[800px] w-full mx-auto px-6 py-8">
         <div className="bg-white shadow-sm p-8">
           {activeTab === 'mint' && <MintForm />}
+          {activeTab === 'gallery' && <Gallery />}
           {activeTab === 'admin' && isOwner && <AdminPanel />}
         </div>
       </main>
