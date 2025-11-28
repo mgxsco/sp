@@ -93,173 +93,123 @@ export function AdminPanel() {
   }
 
   return (
-    <div className="border-t border-black/10 pt-20 mt-20">
-      {/* Admin Header */}
-      <div className="mb-12">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-2 h-2 bg-black rounded-full"></div>
-          <h2 className="font-tomorrow text-2xl md:text-3xl font-medium text-black tracking-wide uppercase">
-            Admin
-          </h2>
+    <div className="space-y-8">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 text-center pb-6 border-b border-black/10">
+        <div>
+          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Minted</p>
+          <p className="font-tektur text-black">{totalTokens?.toString() ?? '0'}</p>
         </div>
-        <p className="text-black/50 text-sm font-tektur">
-          Contract owner controls
+        <div>
+          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Balance</p>
+          <p className="font-tektur text-black">
+            {contractBalance ? `${parseFloat(formatEther(contractBalance.value)).toFixed(4)}` : '0'}
+          </p>
+        </div>
+        <div>
+          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase mb-1">Status</p>
+          <p className="font-tektur text-black">
+            {mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed'}
+          </p>
+        </div>
+      </div>
+
+      {/* Mint Price */}
+      <div>
+        <label className="label">Mint Price (ETH)</label>
+        <div className="flex gap-4 items-end">
+          <input
+            type="text"
+            value={newPrice}
+            onChange={(e) => setNewPrice(e.target.value)}
+            placeholder="0.00"
+            className="input-field font-tektur flex-1"
+          />
+          <button
+            onClick={handleSetPrice}
+            disabled={isLoading || !newPrice}
+            className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 uppercase pb-4"
+          >
+            {activeAction === 'price' && isLoading ? '...' : 'Set'}
+          </button>
+        </div>
+      </div>
+
+      {/* Max Per Wallet */}
+      <div>
+        <label className="label">Max Per Wallet</label>
+        <div className="flex gap-4 items-end">
+          <input
+            type="number"
+            value={newMaxPerWallet}
+            onChange={(e) => setNewMaxPerWallet(e.target.value)}
+            placeholder="0 = unlimited"
+            min="0"
+            className="input-field font-tektur flex-1"
+          />
+          <button
+            onClick={handleSetMaxPerWallet}
+            disabled={isLoading}
+            className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 uppercase pb-4"
+          >
+            {activeAction === 'maxWallet' && isLoading ? '...' : 'Set'}
+          </button>
+        </div>
+      </div>
+
+      {/* Minting Toggle */}
+      <div>
+        <label className="label">Minting</label>
+        <button
+          onClick={handleToggleMinting}
+          disabled={isLoading || mintingEnabled === undefined}
+          className={`btn-secondary w-full ${mintingEnabled ? 'hover:border-red-500 hover:text-red-500' : 'hover:border-green-600 hover:text-green-600'}`}
+        >
+          {activeAction === 'minting' && isLoading
+            ? 'Updating...'
+            : mintingEnabled
+            ? 'Disable Minting'
+            : 'Enable Minting'}
+        </button>
+      </div>
+
+      {/* Withdraw */}
+      <div className="pt-4 border-t border-black/10">
+        <button
+          onClick={handleWithdraw}
+          disabled={isLoading || !contractBalance || contractBalance.value === 0n}
+          className="btn-primary w-full"
+        >
+          {activeAction === 'withdraw' && isLoading
+            ? 'Withdrawing...'
+            : `Withdraw ${contractBalance ? parseFloat(formatEther(contractBalance.value)).toFixed(4) : '0'} ETH`}
+        </button>
+      </div>
+
+      {/* Contract Address */}
+      <div className="text-center pt-4">
+        <a
+          href={`https://sepolia.etherscan.io/address/${contractAddress}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-tektur text-black/40 hover:text-black text-xs"
+        >
+          {contractAddress?.slice(0, 6)}...{contractAddress?.slice(-4)}
+        </a>
+      </div>
+
+      {/* Status Messages */}
+      {isSuccess && (
+        <p className="font-tomorrow text-[10px] tracking-[0.2em] text-green-600 uppercase text-center">
+          Success
         </p>
-      </div>
+      )}
 
-      <div className="grid md:grid-cols-2 gap-16">
-        {/* Left Column - Settings */}
-        <div className="space-y-10">
-          {/* Mint Price */}
-          <div>
-            <label className="label">Mint Price (ETH)</label>
-            <div className="flex gap-4 items-end">
-              <input
-                type="text"
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                placeholder="0.00"
-                className="input-field font-tektur flex-1"
-              />
-              <button
-                onClick={handleSetPrice}
-                disabled={isLoading || !newPrice}
-                className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 transition-colors duration-300 uppercase pb-4"
-              >
-                {activeAction === 'price' && isLoading ? 'Updating...' : 'Update'}
-              </button>
-            </div>
-            <p className="font-tektur text-black/30 text-[10px] mt-2">
-              Current: {mintPrice !== undefined ? `${formatEther(mintPrice)} ETH` : '...'}
-            </p>
-          </div>
-
-          {/* Max Per Wallet */}
-          <div>
-            <label className="label">Max Per Wallet</label>
-            <div className="flex gap-4 items-end">
-              <input
-                type="number"
-                value={newMaxPerWallet}
-                onChange={(e) => setNewMaxPerWallet(e.target.value)}
-                placeholder="0 = unlimited"
-                min="0"
-                className="input-field font-tektur flex-1"
-              />
-              <button
-                onClick={handleSetMaxPerWallet}
-                disabled={isLoading}
-                className="font-tomorrow text-[10px] tracking-[0.2em] text-black/50 hover:text-black disabled:opacity-20 transition-colors duration-300 uppercase pb-4"
-              >
-                {activeAction === 'maxWallet' && isLoading ? 'Updating...' : 'Update'}
-              </button>
-            </div>
-            <p className="font-tektur text-black/30 text-[10px] mt-2">
-              Current: {maxPerWallet !== undefined ? (maxPerWallet === 0n ? 'Unlimited' : maxPerWallet.toString()) : '...'}
-            </p>
-          </div>
-
-          {/* Minting Toggle */}
-          <div>
-            <label className="label">Minting Status</label>
-            <div className="flex items-center justify-between py-4 border-b border-black/10">
-              <span className="font-tektur text-black/80">
-                {mintingEnabled === undefined ? '...' : mintingEnabled ? 'Open' : 'Closed'}
-              </span>
-              <button
-                onClick={handleToggleMinting}
-                disabled={isLoading || mintingEnabled === undefined}
-                className={`font-tomorrow text-[10px] tracking-[0.2em] uppercase transition-colors duration-300 ${
-                  mintingEnabled
-                    ? 'text-black/50 hover:text-red-600'
-                    : 'text-black/50 hover:text-green-600'
-                } disabled:opacity-20`}
-              >
-                {activeAction === 'minting' && isLoading
-                  ? 'Updating...'
-                  : mintingEnabled
-                  ? 'Disable'
-                  : 'Enable'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Stats & Withdraw */}
-        <div className="space-y-10">
-          {/* Contract Stats */}
-          <div>
-            <label className="label">Contract Stats</label>
-            <div className="space-y-0">
-              <div className="flex justify-between items-center py-4 border-b border-black/10">
-                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
-                  Total Minted
-                </span>
-                <span className="font-tektur text-black/80 text-sm">
-                  {totalTokens?.toString() ?? '0'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-4 border-b border-black/10">
-                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
-                  Contract Balance
-                </span>
-                <span className="font-tektur text-black/80 text-sm">
-                  {contractBalance ? `${parseFloat(formatEther(contractBalance.value)).toFixed(4)} ETH` : '0 ETH'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-4 border-b border-black/10">
-                <span className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
-                  Contract
-                </span>
-                <a
-                  href={`https://sepolia.etherscan.io/address/${contractAddress}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-tektur text-black/60 hover:text-black text-xs transition-colors duration-300"
-                >
-                  {contractAddress?.slice(0, 6)}...{contractAddress?.slice(-4)}
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Withdraw */}
-          <div>
-            <label className="label">Withdraw Funds</label>
-            <button
-              onClick={handleWithdraw}
-              disabled={isLoading || !contractBalance || contractBalance.value === 0n}
-              className="btn-secondary w-full mt-2"
-            >
-              <span className="font-tomorrow">
-                {activeAction === 'withdraw' && isLoading
-                  ? 'Withdrawing...'
-                  : `Withdraw ${contractBalance ? parseFloat(formatEther(contractBalance.value)).toFixed(4) : '0'} ETH`}
-              </span>
-            </button>
-            <p className="font-tektur text-black/30 text-[10px] mt-3 text-center">
-              Sends funds to owner wallet
-            </p>
-          </div>
-
-          {/* Status Messages */}
-          {isSuccess && (
-            <div className="pt-4">
-              <p className="font-tomorrow text-[10px] tracking-[0.2em] text-green-600 uppercase">
-                Transaction Successful
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <div className="pt-4">
-              <p className="font-tektur text-red-600 text-sm">
-                {(error as Error)?.message || 'Transaction failed'}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      {error && (
+        <p className="font-tektur text-red-600 text-sm text-center">
+          {(error as Error)?.message || 'Transaction failed'}
+        </p>
+      )}
     </div>
   )
 }
