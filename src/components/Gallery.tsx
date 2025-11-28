@@ -7,6 +7,7 @@ interface NFTMetadata {
   name: string
   description?: string
   image: string
+  thumbnail?: string
   attributes?: { trait_type: string; value: string }[]
 }
 
@@ -118,9 +119,11 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
     )
   }
 
-  const imageUrl = item.metadata.image.startsWith('ipfs://')
-    ? item.metadata.image.replace('ipfs://', 'https://dweb.link/ipfs/')
-    : item.metadata.image
+  // Use thumbnail for grid view if available, fallback to full image
+  const displayImage = item.metadata.thumbnail || item.metadata.image
+  const imageUrl = displayImage.startsWith('ipfs://')
+    ? displayImage.replace('ipfs://', 'https://dweb.link/ipfs/')
+    : displayImage
 
   return (
     <div className="cursor-pointer group" onClick={onClick}>
