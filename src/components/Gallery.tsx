@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useReadContracts } from 'wagmi'
+import { useState, useEffect, useMemo } from 'react'
+import { useReadContracts, useAccount } from 'wagmi'
 import { PUBLIC_MINT_ERC1155_ABI, DEFAULT_CONTRACT_ADDRESS } from '../contracts/NFTContract'
 
 const CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS) as `0x${string}`
@@ -15,7 +15,12 @@ interface NFTItem {
   tokenId: number
   uri: string | null
   metadata: NFTMetadata | null
+  creator: string | null
   loading: boolean
+}
+
+function shortenAddress(address: string) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
 function NFTModal({ item, onClose }: { item: NFTItem; onClose: () => void }) {
@@ -57,6 +62,15 @@ function NFTModal({ item, onClose }: { item: NFTItem; onClose: () => void }) {
               ×
             </button>
           </div>
+
+          {item.creator && (
+            <div className="mb-6">
+              <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase mb-2">
+                Creator
+              </p>
+              <p className="text-black/80 text-sm font-mono">{shortenAddress(item.creator)}</p>
+            </div>
+          )}
 
           {item.metadata.description && (
             <div className="mb-6">
@@ -127,16 +141,23 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
         <p className="text-black text-sm truncate group-hover:text-black/70 transition-colors">
           {item.metadata.name}
         </p>
-        <p className="text-black/40 text-[10px]">#{item.tokenId}</p>
+        <div className="flex justify-between items-center">
+          <p className="text-black/40 text-[10px]">#{item.tokenId}</p>
+          {item.creator && (
+            <p className="text-black/30 text-[10px] font-mono">{shortenAddress(item.creator)}</p>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
 export function Gallery() {
+  const { address } = useAccount()
   const [nfts, setNfts] = useState<NFTItem[]>([])
   const [selectedNFT, setSelectedNFT] = useState<NFTItem | null>(null)
   const [tokenIds, setTokenIds] = useState<number[]>([])
+  const [showOnlyMine, setShowOnlyMine] = useState(false)
 
   // Get total tokens to know how many NFTs exist
   const { data: contractData } = useReadContracts({
@@ -169,24 +190,33 @@ export function Gallery() {
     setTokenIds(ids)
   }, [nextTokenId])
 
-  // Batch fetch URIs for all token IDs
-  const { data: uriResults } = useReadContracts({
-    contracts: tokenIds.map((id) => ({
-      address: CONTRACT_ADDRESS,
-      abi: PUBLIC_MINT_ERC1155_ABI,
-      functionName: 'uri',
-      args: [BigInt(id)],
-    })),
+  // Batch fetch URIs and creators for all token IDs
+  const { data: tokenData } = useReadContracts({
+    contracts: tokenIds.flatMap((id) => [
+      {
+        address: CONTRACT_ADDRESS,
+        abi: PUBLIC_MINT_ERC1155_ABI,
+        functionName: 'uri',
+        args: [BigInt(id)],
+      },
+      {
+        address: CONTRACT_ADDRESS,
+        abi: PUBLIC_MINT_ERC1155_ABI,
+        functionName: 'tokenCreator',
+        args: [BigInt(id)],
+      },
+    ]),
   })
 
   // Fetch metadata when URIs are available
   useEffect(() => {
-    if (!uriResults || tokenIds.length === 0) return
+    if (!tokenData || tokenIds.length === 0) return
 
     const fetchMetadata = async () => {
       const items: NFTItem[] = tokenIds.map((id, i) => ({
         tokenId: id,
-        uri: (uriResults[i]?.result as string) || null,
+        uri: (tokenData[i * 2]?.result as string) || null,
+        creator: (tokenData[i * 2 + 1]?.result as string) || null,
         metadata: null,
         loading: true,
       }))
@@ -214,7 +244,15 @@ export function Gallery() {
     }
 
     fetchMetadata()
-  }, [uriResults, tokenIds])
+  }, [tokenData, tokenIds])
+
+  // Filter NFTs based on showOnlyMine
+  const filteredNfts = useMemo(() => {
+    if (!showOnlyMine || !address) return nfts
+    return nfts.filter(
+      (nft) => nft.creator?.toLowerCase() === address.toLowerCase()
+    )
+  }, [nfts, showOnlyMine, address])
 
   if (!CONTRACT_ADDRESS) {
     return (
@@ -236,20 +274,42 @@ export function Gallery() {
     <div>
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-black/10">
         <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
-          Latest Artworks
+          {showOnlyMine ? 'My Artworks' : 'Latest Artworks'}
         </p>
-        <p className="text-black/40 text-sm">{totalTokens?.toString()} total</p>
+        <div className="flex items-center gap-4">
+          {address && (
+            <button
+              onClick={() => setShowOnlyMine(!showOnlyMine)}
+              className={`font-tomorrow text-[10px] tracking-[0.15em] uppercase px-3 py-1 transition-colors ${
+                showOnlyMine
+                  ? 'bg-black text-[#DFFF00]'
+                  : 'text-black/40 hover:text-black border border-black/20'
+              }`}
+            >
+              {showOnlyMine ? 'Show All' : 'My NFTs'}
+            </button>
+          )}
+          <p className="text-black/40 text-sm">{totalTokens?.toString()} total</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {nfts.map((item) => (
-          <NFTCard
-            key={item.tokenId}
-            item={item}
-            onClick={() => item.metadata && setSelectedNFT(item)}
-          />
-        ))}
-      </div>
+      {filteredNfts.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-black/40">
+            {showOnlyMine ? 'You haven\'t minted any artworks yet' : 'No artworks found'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {filteredNfts.map((item) => (
+            <NFTCard
+              key={item.tokenId}
+              item={item}
+              onClick={() => item.metadata && setSelectedNFT(item)}
+            />
+          ))}
+        </div>
+      )}
 
       {selectedNFT && (
         <NFTModal item={selectedNFT} onClose={() => setSelectedNFT(null)} />
