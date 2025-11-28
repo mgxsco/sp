@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode } from 'react'
 import { CHAIN_IDS } from '../contracts/NFTContract'
 
 type ChainId = typeof CHAIN_IDS[keyof typeof CHAIN_IDS]
