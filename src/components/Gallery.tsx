@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useReadContracts, useAccount, useChainId } from 'wagmi'
+import { useReadContracts, useAccount } from 'wagmi'
 import { PUBLIC_MINT_ERC1155_ABI, getContractAddress } from '../contracts/NFTContract'
+import { useActiveChain } from '../contexts/ChainContext'
 
 interface NFTMetadata {
   name: string
@@ -152,8 +153,8 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
 
 export function Gallery() {
   const { address } = useAccount()
-  const chainId = useChainId()
-  const contractAddress = getContractAddress(chainId)
+  const { activeChainId } = useActiveChain()
+  const contractAddress = getContractAddress(activeChainId)
 
   const [nfts, setNfts] = useState<NFTItem[]>([])
   const [selectedNFT, setSelectedNFT] = useState<NFTItem | null>(null)

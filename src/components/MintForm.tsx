@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useAccount, useChainId } from 'wagmi'
+import { useAccount } from 'wagmi'
 import { formatEther } from 'viem'
 import { FileUpload } from './FileUpload'
 import { useNFTMint } from '../hooks/useNFTMint'
 import { useIPFSUpload } from '../hooks/useIPFSUpload'
+import { useActiveChain, CHAIN_IDS } from '../contexts/ChainContext'
 
 interface Attribute {
   trait_type: string
@@ -12,7 +13,7 @@ interface Attribute {
 
 export function MintForm() {
   const { address, isConnected } = useAccount()
-  const chainId = useChainId()
+  const { activeChainId } = useActiveChain()
   const [file, setFile] = useState<File | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -77,12 +78,14 @@ export function MintForm() {
   const canMint = isConnected && file && name && !isLoading && contractAddress && mintingEnabled && hasRemainingMints
 
   const getExplorerUrl = (txHash: string) => {
-    switch (chainId) {
-      case 11155111:
+    switch (activeChainId) {
+      case CHAIN_IDS.MAINNET:
+        return `https://etherscan.io/tx/${txHash}`
+      case CHAIN_IDS.SEPOLIA:
         return `https://sepolia.etherscan.io/tx/${txHash}`
-      case 137:
+      case CHAIN_IDS.POLYGON:
         return `https://polygonscan.com/tx/${txHash}`
-      case 80002:
+      case CHAIN_IDS.POLYGON_AMOY:
         return `https://amoy.polygonscan.com/tx/${txHash}`
       default:
         return `https://etherscan.io/tx/${txHash}`

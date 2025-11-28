@@ -2,8 +2,19 @@ import { useState, useEffect } from 'react'
 import { formatEther, parseEther } from 'viem'
 import { useNFTMint } from '../hooks/useNFTMint'
 import { useBalance } from 'wagmi'
+import { useActiveChain, CHAIN_IDS, CHAIN_NAMES, ChainId } from '../contexts/ChainContext'
+import { getContractAddress } from '../contracts/NFTContract'
+
+const AVAILABLE_CHAINS: ChainId[] = [
+  CHAIN_IDS.SEPOLIA,
+  CHAIN_IDS.MAINNET,
+  CHAIN_IDS.POLYGON,
+  CHAIN_IDS.POLYGON_AMOY,
+]
 
 export function AdminPanel() {
+  const { activeChainId, setActiveChainId } = useActiveChain()
+
   const {
     isOwner,
     contractAddress,
@@ -92,8 +103,50 @@ export function AdminPanel() {
     }
   }
 
+  const getExplorerUrl = (address: string) => {
+    switch (activeChainId) {
+      case CHAIN_IDS.MAINNET:
+        return `https://etherscan.io/address/${address}`
+      case CHAIN_IDS.SEPOLIA:
+        return `https://sepolia.etherscan.io/address/${address}`
+      case CHAIN_IDS.POLYGON:
+        return `https://polygonscan.com/address/${address}`
+      case CHAIN_IDS.POLYGON_AMOY:
+        return `https://amoy.polygonscan.com/address/${address}`
+      default:
+        return `https://etherscan.io/address/${address}`
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Active Chain Selector */}
+      <div>
+        <label className="label">Active Chain for Minting</label>
+        <div className="grid grid-cols-2 gap-2">
+          {AVAILABLE_CHAINS.map((chainId) => {
+            const hasContract = !!getContractAddress(chainId)
+            return (
+              <button
+                key={chainId}
+                onClick={() => setActiveChainId(chainId)}
+                disabled={!hasContract}
+                className={`font-tomorrow text-[11px] tracking-[0.15em] uppercase py-3 px-4 transition-colors ${
+                  activeChainId === chainId
+                    ? 'bg-black text-[#DFFF00]'
+                    : hasContract
+                    ? 'border border-black/20 text-black/60 hover:border-black hover:text-black'
+                    : 'border border-black/10 text-black/20 cursor-not-allowed'
+                }`}
+              >
+                {CHAIN_NAMES[chainId]}
+                {!hasContract && ' (no contract)'}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="flex gap-6 text-center pb-4 border-b border-black/10">
         <div className="flex-1">
@@ -189,7 +242,7 @@ export function AdminPanel() {
       {/* Contract Address */}
       <div className="text-center pt-2">
         <a
-          href={`https://sepolia.etherscan.io/address/${contractAddress}`}
+          href={getExplorerUrl(contractAddress || '')}
           target="_blank"
           rel="noopener noreferrer"
           className="text-black/40 hover:text-black text-xs transition-colors"

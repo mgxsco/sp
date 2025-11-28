@@ -1,13 +1,14 @@
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from 'wagmi'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi'
 import { PUBLIC_MINT_ERC1155_ABI, getContractAddress } from '../contracts/NFTContract'
+import { useActiveChain } from '../contexts/ChainContext'
 
 export function useNFTMint() {
   const { address } = useAccount()
-  const chainId = useChainId()
+  const { activeChainId } = useActiveChain()
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract()
 
-  // Get contract address for current chain
-  const contractAddress = getContractAddress(chainId)
+  // Get contract address for active chain (set by admin)
+  const contractAddress = getContractAddress(activeChainId)
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
@@ -200,6 +201,6 @@ export function useNFTMint() {
     // User state
     isOwner,
     // Chain info
-    chainId,
+    activeChainId,
   }
 }
