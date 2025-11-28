@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { formatEther, parseEther } from 'viem'
 import { useNFTMint } from '../hooks/useNFTMint'
-import { useBalance, useReadContract, useWriteContract, useSwitchChain, useChainId } from 'wagmi'
+import { useAccount, useBalance, useReadContract, useWriteContract, useSwitchChain, useChainId } from 'wagmi'
 import { useActiveChain, CHAIN_IDS, CHAIN_NAMES, ChainId } from '../contexts/ChainContext'
 import { getContractAddress, PUBLIC_MINT_ERC1155_ABI } from '../contracts/NFTContract'
 
@@ -20,11 +20,11 @@ interface ActivationStep {
 
 export function AdminPanel() {
   const { activeChainId, setActiveChainId } = useActiveChain()
+  const { address } = useAccount()
   const walletChainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
 
   const {
-    isOwner,
     contractAddress,
     mintPrice,
     maxPerWallet,
@@ -39,6 +39,47 @@ export function AdminPanel() {
     error,
     reset,
   } = useNFTMint()
+
+  // Check owner on all chains - admin can control from any chain
+  const { data: sepoliaOwner } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.SEPOLIA) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'owner',
+    chainId: CHAIN_IDS.SEPOLIA,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.SEPOLIA) },
+  })
+
+  const { data: mainnetOwner } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.MAINNET) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'owner',
+    chainId: CHAIN_IDS.MAINNET,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.MAINNET) },
+  })
+
+  const { data: polygonOwner } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.POLYGON) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'owner',
+    chainId: CHAIN_IDS.POLYGON,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.POLYGON) },
+  })
+
+  const { data: amoyOwner } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.POLYGON_AMOY) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'owner',
+    chainId: CHAIN_IDS.POLYGON_AMOY,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.POLYGON_AMOY) },
+  })
+
+  // Check if wallet is owner on ANY chain
+  const isOwnerOnAnyChain = address && (
+    (sepoliaOwner && address.toLowerCase() === (sepoliaOwner as string).toLowerCase()) ||
+    (mainnetOwner && address.toLowerCase() === (mainnetOwner as string).toLowerCase()) ||
+    (polygonOwner && address.toLowerCase() === (polygonOwner as string).toLowerCase()) ||
+    (amoyOwner && address.toLowerCase() === (amoyOwner as string).toLowerCase())
+  )
 
   const { writeContractAsync } = useWriteContract()
 
@@ -225,7 +266,7 @@ export function AdminPanel() {
     setActivationError(null)
   }
 
-  if (!isOwner) return null
+  if (!isOwnerOnAnyChain) return null
 
   const isLoading = isPending || isConfirming
 
