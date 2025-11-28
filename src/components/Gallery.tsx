@@ -118,8 +118,8 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = ''
-            (e.target as HTMLImageElement).className = 'hidden'
+            const img = e.target as HTMLImageElement
+            img.style.display = 'none'
           }}
         />
       </div>
