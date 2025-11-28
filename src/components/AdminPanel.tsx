@@ -12,12 +12,6 @@ const AVAILABLE_CHAINS: ChainId[] = [
   CHAIN_IDS.POLYGON_AMOY,
 ]
 
-interface ActivationStep {
-  chainId: ChainId
-  action: 'enable' | 'disable'
-  status: 'pending' | 'switching' | 'signing' | 'confirming' | 'done' | 'error'
-}
-
 export function AdminPanel() {
   const { activeChainId, setActiveChainId } = useActiveChain()
   const { address } = useAccount()
@@ -86,12 +80,7 @@ export function AdminPanel() {
   const [newPrice, setNewPrice] = useState('')
   const [newMaxPerWallet, setNewMaxPerWallet] = useState('')
   const [activeAction, setActiveAction] = useState<string | null>(null)
-
-  // Chain activation flow state
-  const [activationSteps, setActivationSteps] = useState<ActivationStep[]>([])
-  const [isActivating, setIsActivating] = useState(false)
   const [activationError, setActivationError] = useState<string | null>(null)
-  const [targetChain, setTargetChain] = useState<ChainId | null>(null)
 
   // Read minting status for all chains
   const { data: sepoliaMinting, refetch: refetchSepolia } = useReadContract({
@@ -164,107 +153,6 @@ export function AdminPanel() {
       }, 2000)
     }
   }, [isSuccess, reset])
-
-  // Handle chain activation
-  const handleActivateChain = async (selectedChainId: ChainId) => {
-    const selectedContract = getContractAddress(selectedChainId)
-    if (!selectedContract) return
-
-    setActivationError(null)
-    setTargetChain(selectedChainId)
-
-    // Build the list of steps needed
-    const steps: ActivationStep[] = []
-
-    // First, disable minting on all other chains that have it enabled
-    for (const chainId of AVAILABLE_CHAINS) {
-      if (chainId === selectedChainId) continue
-      const hasContract = !!getContractAddress(chainId)
-      const isEnabled = mintingStatusByChain[chainId]
-      if (hasContract && isEnabled) {
-        steps.push({ chainId, action: 'disable', status: 'pending' })
-      }
-    }
-
-    // Then enable minting on the selected chain
-    steps.push({ chainId: selectedChainId, action: 'enable', status: 'pending' })
-
-    setActivationSteps(steps)
-    setIsActivating(true)
-
-    // Process steps sequentially
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i]
-      const stepContract = getContractAddress(step.chainId)
-      if (!stepContract) continue
-
-      try {
-        // Update status to switching
-        setActivationSteps(prev => prev.map((s, idx) =>
-          idx === i ? { ...s, status: 'switching' } : s
-        ))
-
-        // Switch to the target chain if needed
-        if (walletChainId !== step.chainId) {
-          await switchChainAsync({ chainId: step.chainId })
-          // Wait a bit for the chain switch to settle
-          await new Promise(resolve => setTimeout(resolve, 1000))
-        }
-
-        // Update status to signing
-        setActivationSteps(prev => prev.map((s, idx) =>
-          idx === i ? { ...s, status: 'signing' } : s
-        ))
-
-        // Execute the transaction
-        await writeContractAsync({
-          address: stepContract,
-          abi: PUBLIC_MINT_ERC1155_ABI,
-          functionName: 'setMintingEnabled',
-          args: [step.action === 'enable'],
-          chainId: step.chainId,
-        })
-
-        // Update status to confirming
-        setActivationSteps(prev => prev.map((s, idx) =>
-          idx === i ? { ...s, status: 'confirming' } : s
-        ))
-
-        // Wait for confirmation (simplified - in production you'd use useWaitForTransactionReceipt)
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        // Update status to done
-        setActivationSteps(prev => prev.map((s, idx) =>
-          idx === i ? { ...s, status: 'done' } : s
-        ))
-
-      } catch (err) {
-        console.error(`Failed to ${step.action} minting on chain ${step.chainId}:`, err)
-        setActivationSteps(prev => prev.map((s, idx) =>
-          idx === i ? { ...s, status: 'error' } : s
-        ))
-        setActivationError(`Failed to ${step.action} minting on ${CHAIN_NAMES[step.chainId]}`)
-        setIsActivating(false)
-        return
-      }
-    }
-
-    // All done - update active chain in context and refetch statuses
-    setActiveChainId(selectedChainId)
-    setIsActivating(false)
-    setActivationSteps([])
-    setTargetChain(null)
-
-    // Refetch all minting statuses
-    setTimeout(refetchAll, 1000)
-  }
-
-  const cancelActivation = () => {
-    setIsActivating(false)
-    setActivationSteps([])
-    setTargetChain(null)
-    setActivationError(null)
-  }
 
   // Track which chain is being toggled
   const [togglingChain, setTogglingChain] = useState<ChainId | null>(null)
@@ -364,17 +252,6 @@ export function AdminPanel() {
     }
   }
 
-  const getStepStatusText = (step: ActivationStep) => {
-    switch (step.status) {
-      case 'pending': return 'Waiting...'
-      case 'switching': return 'Switching chain...'
-      case 'signing': return 'Sign in wallet...'
-      case 'confirming': return 'Confirming...'
-      case 'done': return 'Done ✓'
-      case 'error': return 'Failed ✗'
-    }
-  }
-
   return (
     <div className="space-y-6">
       {/* Chain Minting Controls */}
@@ -384,44 +261,13 @@ export function AdminPanel() {
           Toggle minting on/off for each chain. Signing a transaction is required for each change.
         </p>
 
-        {/* Activation in progress */}
-        {isActivating && activationSteps.length > 0 && (
-          <div className="mb-4 p-4 bg-[#f5f5f5] border border-black/10">
-            <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/60 uppercase mb-3">
-              Activating {CHAIN_NAMES[targetChain!]}...
-            </p>
-            <div className="space-y-2">
-              {activationSteps.map((step, idx) => (
-                <div key={idx} className="flex justify-between items-center text-sm">
-                  <span className="text-black/70">
-                    {step.action === 'enable' ? 'Enable' : 'Disable'} {CHAIN_NAMES[step.chainId]}
-                  </span>
-                  <span className={`font-mono text-xs ${
-                    step.status === 'done' ? 'text-green-600' :
-                    step.status === 'error' ? 'text-red-600' :
-                    step.status === 'pending' ? 'text-black/30' :
-                    'text-black/60'
-                  }`}>
-                    {getStepStatusText(step)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {activationError && (
-              <div className="mt-3 text-red-600 text-sm">{activationError}</div>
-            )}
-            <button
-              onClick={cancelActivation}
-              className="mt-3 text-black/40 hover:text-black text-xs uppercase tracking-wider"
-            >
-              Cancel
-            </button>
-          </div>
+        {/* Error message */}
+        {activationError && (
+          <div className="mb-3 p-3 bg-red-50 text-red-600 text-sm">{activationError}</div>
         )}
 
         {/* Chain grid */}
-        {!isActivating && (
-          <div className="space-y-2">
+        <div className="space-y-2">
             {AVAILABLE_CHAINS.map((chainId) => {
               const chainContract = getContractAddress(chainId)
               const isEnabled = mintingStatusByChain[chainId]
@@ -488,8 +334,7 @@ export function AdminPanel() {
                 </div>
               )
             })}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Stats for active chain */}
