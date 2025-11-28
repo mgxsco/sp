@@ -168,11 +168,13 @@ export function Gallery() {
         address: contractAddress || undefined,
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'totalTokens',
+        chainId: activeChainId,
       },
       {
         address: contractAddress || undefined,
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'nextTokenId',
+        chainId: activeChainId,
       },
     ],
   })
@@ -200,12 +202,14 @@ export function Gallery() {
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'uri',
         args: [BigInt(id)],
+        chainId: activeChainId,
       },
       {
         address: contractAddress || undefined,
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'tokenCreator',
         args: [BigInt(id)],
+        chainId: activeChainId,
       },
     ]),
   })

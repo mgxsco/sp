@@ -14,11 +14,12 @@ export function useNFTMint() {
     hash,
   })
 
-  // Get contract info - only query if we have a valid contract address
+  // Get contract info - read from the ACTIVE chain, not wallet's connected chain
   const { data: contractName } = useReadContract({
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'name',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -26,6 +27,7 @@ export function useNFTMint() {
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'symbol',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -33,6 +35,7 @@ export function useNFTMint() {
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'owner',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -40,6 +43,7 @@ export function useNFTMint() {
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'mintPrice',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -47,6 +51,7 @@ export function useNFTMint() {
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'maxPerWallet',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -54,6 +59,7 @@ export function useNFTMint() {
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'mintingEnabled',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -61,6 +67,7 @@ export function useNFTMint() {
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'totalTokens',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -68,6 +75,7 @@ export function useNFTMint() {
     address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'nextTokenId',
+    chainId: activeChainId,
     query: { enabled: !!contractAddress },
   })
 
@@ -76,6 +84,7 @@ export function useNFTMint() {
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'remainingMintsForWallet',
     args: address ? [address] : undefined,
+    chainId: activeChainId,
     query: { enabled: !!contractAddress && !!address },
   })
 
@@ -97,6 +106,7 @@ export function useNFTMint() {
       functionName: 'mintNew',
       args: [tokenURI],
       value: mintPrice || 0n,
+      chainId: activeChainId,
     })
   }
 
@@ -115,6 +125,7 @@ export function useNFTMint() {
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'ownerMintNew',
       args: [toAddress, tokenURI],
+      chainId: activeChainId,
     })
   }
 
@@ -128,6 +139,7 @@ export function useNFTMint() {
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'setMintPrice',
       args: [price],
+      chainId: activeChainId,
     })
   }
 
@@ -141,6 +153,7 @@ export function useNFTMint() {
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'setMaxPerWallet',
       args: [limit],
+      chainId: activeChainId,
     })
   }
 
@@ -154,6 +167,7 @@ export function useNFTMint() {
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'setMintingEnabled',
       args: [enabled],
+      chainId: activeChainId,
     })
   }
 
@@ -167,6 +181,7 @@ export function useNFTMint() {
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'withdraw',
       args: [],
+      chainId: activeChainId,
     })
   }
 
