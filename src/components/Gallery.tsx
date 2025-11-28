@@ -26,7 +26,7 @@ function NFTModal({ item, onClose }: { item: NFTItem; onClose: () => void }) {
   if (!item.metadata) return null
 
   const imageUrl = item.metadata.image.startsWith('ipfs://')
-    ? item.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/')
+    ? item.metadata.image.replace('ipfs://', 'https://cloudflare-ipfs.com/ipfs/')
     : item.metadata.image
 
   return (
@@ -119,7 +119,7 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
   }
 
   const imageUrl = item.metadata.image.startsWith('ipfs://')
-    ? item.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/')
+    ? item.metadata.image.replace('ipfs://', 'https://cloudflare-ipfs.com/ipfs/')
     : item.metadata.image
 
   return (
@@ -234,7 +234,7 @@ export function Gallery() {
 
         try {
           const metadataUrl = item.uri.startsWith('ipfs://')
-            ? item.uri.replace('ipfs://', 'https://ipfs.io/ipfs/')
+            ? item.uri.replace('ipfs://', 'https://cloudflare-ipfs.com/ipfs/')
             : item.uri
 
           const response = await fetch(metadataUrl)
