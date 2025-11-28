@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useReadContract } from 'wagmi'
+import { useReadContracts } from 'wagmi'
 import { PUBLIC_MINT_ERC1155_ABI, DEFAULT_CONTRACT_ADDRESS } from '../contracts/NFTContract'
 
 const CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS) as `0x${string}`
@@ -13,21 +13,91 @@ interface NFTMetadata {
 
 interface NFTItem {
   tokenId: number
+  uri: string | null
   metadata: NFTMetadata | null
   loading: boolean
-  error: boolean
 }
 
-function NFTCard({ item }: { item: NFTItem }) {
+function NFTModal({ item, onClose }: { item: NFTItem; onClose: () => void }) {
+  if (!item.metadata) return null
+
+  const imageUrl = item.metadata.image.startsWith('ipfs://')
+    ? item.metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/')
+    : item.metadata.image
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white max-w-2xl w-full max-h-[90vh] overflow-auto shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="bg-[#1a1a1a] aspect-square flex items-center justify-center">
+          <img
+            src={imageUrl}
+            alt={item.metadata.name}
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="font-tomorrow text-xl text-black uppercase tracking-wide">
+                {item.metadata.name}
+              </h2>
+              <p className="text-black/40 text-sm">#{item.tokenId}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-black/40 hover:text-black text-2xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+
+          {item.metadata.description && (
+            <div className="mb-6">
+              <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase mb-2">
+                Description
+              </p>
+              <p className="text-black/80 text-sm">{item.metadata.description}</p>
+            </div>
+          )}
+
+          {item.metadata.attributes && item.metadata.attributes.length > 0 && (
+            <div>
+              <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase mb-3">
+                Attributes
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {item.metadata.attributes.map((attr, i) => (
+                  <div key={i} className="bg-[#f5f5f5] p-3">
+                    <p className="text-black/40 text-[10px] uppercase">{attr.trait_type}</p>
+                    <p className="text-black text-sm">{attr.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
   if (item.loading) {
     return (
-      <div className="bg-[#1a1a1a] aspect-square flex items-center justify-center">
-        <p className="text-white/40 text-xs">Loading...</p>
+      <div className="bg-[#1a1a1a] aspect-square flex items-center justify-center animate-pulse">
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
       </div>
     )
   }
 
-  if (item.error || !item.metadata) {
+  if (!item.metadata) {
     return (
       <div className="bg-[#1a1a1a] aspect-square flex items-center justify-center">
         <p className="text-white/40 text-xs">#{item.tokenId}</p>
@@ -40,19 +110,23 @@ function NFTCard({ item }: { item: NFTItem }) {
     : item.metadata.image
 
   return (
-    <div className="group">
+    <div className="cursor-pointer group" onClick={onClick}>
       <div className="bg-[#1a1a1a] aspect-square overflow-hidden">
         <img
           src={imageUrl}
           alt={item.metadata.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
           onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none'
+            (e.target as HTMLImageElement).src = ''
+            (e.target as HTMLImageElement).className = 'hidden'
           }}
         />
       </div>
       <div className="mt-2">
-        <p className="text-black text-sm truncate">{item.metadata.name}</p>
+        <p className="text-black text-sm truncate group-hover:text-black/70 transition-colors">
+          {item.metadata.name}
+        </p>
         <p className="text-black/40 text-[10px]">#{item.tokenId}</p>
       </div>
     </div>
@@ -61,111 +135,86 @@ function NFTCard({ item }: { item: NFTItem }) {
 
 export function Gallery() {
   const [nfts, setNfts] = useState<NFTItem[]>([])
+  const [selectedNFT, setSelectedNFT] = useState<NFTItem | null>(null)
+  const [tokenIds, setTokenIds] = useState<number[]>([])
 
-  const { data: totalTokens } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: PUBLIC_MINT_ERC1155_ABI,
-    functionName: 'totalTokens',
+  // Get total tokens to know how many NFTs exist
+  const { data: contractData } = useReadContracts({
+    contracts: [
+      {
+        address: CONTRACT_ADDRESS,
+        abi: PUBLIC_MINT_ERC1155_ABI,
+        functionName: 'totalTokens',
+      },
+      {
+        address: CONTRACT_ADDRESS,
+        abi: PUBLIC_MINT_ERC1155_ABI,
+        functionName: 'nextTokenId',
+      },
+    ],
   })
 
-  const { data: nextTokenId } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: PUBLIC_MINT_ERC1155_ABI,
-    functionName: 'nextTokenId',
-  })
+  const totalTokens = contractData?.[0]?.result as bigint | undefined
+  const nextTokenId = contractData?.[1]?.result as bigint | undefined
 
+  // Calculate which token IDs to fetch (latest 20)
   useEffect(() => {
-    if (!nextTokenId || !CONTRACT_ADDRESS) return
+    if (!nextTokenId) return
+    const total = Number(nextTokenId)
+    const count = Math.min(20, total)
+    const ids: number[] = []
+    for (let i = total - 1; i >= total - count && i >= 0; i--) {
+      ids.push(i)
+    }
+    setTokenIds(ids)
+  }, [nextTokenId])
 
-    const fetchNFTs = async () => {
-      const total = Number(nextTokenId)
-      const count = Math.min(20, total)
-      const startId = Math.max(0, total - count)
+  // Batch fetch URIs for all token IDs
+  const { data: uriResults } = useReadContracts({
+    contracts: tokenIds.map((id) => ({
+      address: CONTRACT_ADDRESS,
+      abi: PUBLIC_MINT_ERC1155_ABI,
+      functionName: 'uri',
+      args: [BigInt(id)],
+    })),
+  })
 
-      // Initialize NFT items
-      const items: NFTItem[] = []
-      for (let i = total - 1; i >= startId; i--) {
-        items.push({ tokenId: i, metadata: null, loading: true, error: false })
-      }
+  // Fetch metadata when URIs are available
+  useEffect(() => {
+    if (!uriResults || tokenIds.length === 0) return
+
+    const fetchMetadata = async () => {
+      const items: NFTItem[] = tokenIds.map((id, i) => ({
+        tokenId: id,
+        uri: (uriResults[i]?.result as string) || null,
+        metadata: null,
+        loading: true,
+      }))
       setNfts(items)
 
-      // Fetch metadata for each token
-      for (let i = 0; i < items.length; i++) {
-        const tokenId = items[i].tokenId
+      // Fetch metadata for each token in parallel
+      const metadataPromises = items.map(async (item) => {
+        if (!item.uri) return { ...item, loading: false }
+
         try {
-          // Fetch URI from contract
-          const response = await fetch(
-            `https://eth-sepolia.g.alchemy.com/v2/demo`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'eth_call',
-                params: [
-                  {
-                    to: CONTRACT_ADDRESS,
-                    data: `0x0e89341c${tokenId.toString(16).padStart(64, '0')}`,
-                  },
-                  'latest',
-                ],
-                id: 1,
-              }),
-            }
-          )
+          const metadataUrl = item.uri.startsWith('ipfs://')
+            ? item.uri.replace('ipfs://', 'https://ipfs.io/ipfs/')
+            : item.uri
 
-          const data = await response.json()
-          if (data.result && data.result !== '0x') {
-            // Decode the URI from the response
-            const hex = data.result.slice(2)
-            const offset = parseInt(hex.slice(0, 64), 16) * 2
-            const length = parseInt(hex.slice(offset, offset + 64), 16)
-            const uriHex = hex.slice(offset + 64, offset + 64 + length * 2)
-            let uri = ''
-            for (let j = 0; j < uriHex.length; j += 2) {
-              uri += String.fromCharCode(parseInt(uriHex.slice(j, j + 2), 16))
-            }
-
-            // Convert IPFS URI
-            const metadataUrl = uri.startsWith('ipfs://')
-              ? uri.replace('ipfs://', 'https://ipfs.io/ipfs/')
-              : uri
-
-            // Fetch metadata
-            const metaResponse = await fetch(metadataUrl)
-            const metadata = await metaResponse.json()
-
-            setNfts((prev) =>
-              prev.map((nft) =>
-                nft.tokenId === tokenId
-                  ? { ...nft, metadata, loading: false }
-                  : nft
-              )
-            )
-          } else {
-            setNfts((prev) =>
-              prev.map((nft) =>
-                nft.tokenId === tokenId
-                  ? { ...nft, loading: false, error: true }
-                  : nft
-              )
-            )
-          }
-        } catch (err) {
-          console.error(`Failed to fetch NFT #${tokenId}:`, err)
-          setNfts((prev) =>
-            prev.map((nft) =>
-              nft.tokenId === tokenId
-                ? { ...nft, loading: false, error: true }
-                : nft
-            )
-          )
+          const response = await fetch(metadataUrl)
+          const metadata = await response.json()
+          return { ...item, metadata, loading: false }
+        } catch {
+          return { ...item, loading: false }
         }
-      }
+      })
+
+      const results = await Promise.all(metadataPromises)
+      setNfts(results)
     }
 
-    fetchNFTs()
-  }, [nextTokenId])
+    fetchMetadata()
+  }, [uriResults, tokenIds])
 
   if (!CONTRACT_ADDRESS) {
     return (
@@ -194,9 +243,17 @@ export function Gallery() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {nfts.map((item) => (
-          <NFTCard key={item.tokenId} item={item} />
+          <NFTCard
+            key={item.tokenId}
+            item={item}
+            onClick={() => item.metadata && setSelectedNFT(item)}
+          />
         ))}
       </div>
+
+      {selectedNFT && (
+        <NFTModal item={selectedNFT} onClose={() => setSelectedNFT(null)} />
+      )}
     </div>
   )
 }
