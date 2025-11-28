@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useReadContracts, useAccount } from 'wagmi'
-import { PUBLIC_MINT_ERC1155_ABI, DEFAULT_CONTRACT_ADDRESS } from '../contracts/NFTContract'
-
-const CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS) as `0x${string}`
+import { useReadContracts, useAccount, useChainId } from 'wagmi'
+import { PUBLIC_MINT_ERC1155_ABI, getContractAddress } from '../contracts/NFTContract'
 
 interface NFTMetadata {
   name: string
@@ -154,6 +152,9 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
 
 export function Gallery() {
   const { address } = useAccount()
+  const chainId = useChainId()
+  const contractAddress = getContractAddress(chainId)
+
   const [nfts, setNfts] = useState<NFTItem[]>([])
   const [selectedNFT, setSelectedNFT] = useState<NFTItem | null>(null)
   const [tokenIds, setTokenIds] = useState<number[]>([])
@@ -163,12 +164,12 @@ export function Gallery() {
   const { data: contractData } = useReadContracts({
     contracts: [
       {
-        address: CONTRACT_ADDRESS,
+        address: contractAddress || undefined,
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'totalTokens',
       },
       {
-        address: CONTRACT_ADDRESS,
+        address: contractAddress || undefined,
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'nextTokenId',
       },
@@ -194,13 +195,13 @@ export function Gallery() {
   const { data: tokenData } = useReadContracts({
     contracts: tokenIds.flatMap((id) => [
       {
-        address: CONTRACT_ADDRESS,
+        address: contractAddress || undefined,
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'uri',
         args: [BigInt(id)],
       },
       {
-        address: CONTRACT_ADDRESS,
+        address: contractAddress || undefined,
         abi: PUBLIC_MINT_ERC1155_ABI,
         functionName: 'tokenCreator',
         args: [BigInt(id)],
@@ -254,10 +255,10 @@ export function Gallery() {
     )
   }, [nfts, showOnlyMine, address])
 
-  if (!CONTRACT_ADDRESS) {
+  if (!contractAddress) {
     return (
       <div className="text-center py-12">
-        <p className="text-black/40">No contract configured</p>
+        <p className="text-black/40">No contract deployed on this chain</p>
       </div>
     )
   }

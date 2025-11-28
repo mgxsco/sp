@@ -195,5 +195,27 @@ export const PUBLIC_MINT_ERC1155_ABI = [
   }
 ] as const
 
-// Contract address - Update after deploying your contract
-export const DEFAULT_CONTRACT_ADDRESS = '' as const
+// Chain IDs
+export const CHAIN_IDS = {
+  MAINNET: 1,
+  SEPOLIA: 11155111,
+  POLYGON: 137,
+  POLYGON_AMOY: 80002,
+} as const
+
+// Contract addresses per chain - Update after deploying your contracts
+export const CONTRACT_ADDRESSES: Record<number, `0x${string}` | ''> = {
+  [CHAIN_IDS.MAINNET]: (import.meta.env.VITE_CONTRACT_MAINNET || '') as `0x${string}`,
+  [CHAIN_IDS.SEPOLIA]: (import.meta.env.VITE_CONTRACT_SEPOLIA || '') as `0x${string}`,
+  [CHAIN_IDS.POLYGON]: (import.meta.env.VITE_CONTRACT_POLYGON || '') as `0x${string}`,
+  [CHAIN_IDS.POLYGON_AMOY]: (import.meta.env.VITE_CONTRACT_POLYGON_AMOY || '') as `0x${string}`,
+}
+
+// Legacy fallback - for backwards compatibility
+export const DEFAULT_CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || '') as `0x${string}`
+
+// Get contract address for a specific chain
+export function getContractAddress(chainId: number): `0x${string}` | null {
+  const address = CONTRACT_ADDRESSES[chainId] || DEFAULT_CONTRACT_ADDRESS
+  return address && address.length > 0 ? address : null
+}

@@ -1,70 +1,81 @@
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi'
-import { PUBLIC_MINT_ERC1155_ABI, DEFAULT_CONTRACT_ADDRESS } from '../contracts/NFTContract'
-
-const CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS) as `0x${string}`
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from 'wagmi'
+import { PUBLIC_MINT_ERC1155_ABI, getContractAddress } from '../contracts/NFTContract'
 
 export function useNFTMint() {
   const { address } = useAccount()
+  const chainId = useChainId()
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract()
+
+  // Get contract address for current chain
+  const contractAddress = getContractAddress(chainId)
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   })
 
-  // Get contract info
+  // Get contract info - only query if we have a valid contract address
   const { data: contractName } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'name',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: contractSymbol } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'symbol',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: contractOwner } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'owner',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: mintPrice } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'mintPrice',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: maxPerWallet } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'maxPerWallet',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: mintingEnabled } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'mintingEnabled',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: totalTokens } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'totalTokens',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: nextTokenId } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'nextTokenId',
+    query: { enabled: !!contractAddress },
   })
 
   const { data: remainingMints } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contractAddress || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'remainingMintsForWallet',
     args: address ? [address] : undefined,
+    query: { enabled: !!contractAddress && !!address },
   })
 
   const isOwner = address && contractOwner ? address.toLowerCase() === contractOwner.toLowerCase() : false
@@ -75,12 +86,12 @@ export function useNFTMint() {
    * Mint a NEW token with your own URI - anyone can call this
    */
   const mintNew = async (tokenURI: string) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('NFT contract address not configured')
+    if (!contractAddress) {
+      throw new Error('NFT contract not deployed on this chain')
     }
 
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: contractAddress,
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'mintNew',
       args: [tokenURI],
@@ -94,12 +105,12 @@ export function useNFTMint() {
    * Owner mint new token (bypasses payment)
    */
   const ownerMintNew = async (toAddress: `0x${string}`, tokenURI: string) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('NFT contract address not configured')
+    if (!contractAddress) {
+      throw new Error('NFT contract not deployed on this chain')
     }
 
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: contractAddress,
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'ownerMintNew',
       args: [toAddress, tokenURI],
@@ -110,8 +121,9 @@ export function useNFTMint() {
    * Set mint price (owner only)
    */
   const setMintPrice = async (price: bigint) => {
+    if (!contractAddress) throw new Error('No contract on this chain')
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: contractAddress,
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'setMintPrice',
       args: [price],
@@ -122,8 +134,9 @@ export function useNFTMint() {
    * Set max per wallet (owner only)
    */
   const setMaxPerWallet = async (limit: bigint) => {
+    if (!contractAddress) throw new Error('No contract on this chain')
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: contractAddress,
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'setMaxPerWallet',
       args: [limit],
@@ -134,8 +147,9 @@ export function useNFTMint() {
    * Enable/disable minting (owner only)
    */
   const setMintingEnabled = async (enabled: boolean) => {
+    if (!contractAddress) throw new Error('No contract on this chain')
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: contractAddress,
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'setMintingEnabled',
       args: [enabled],
@@ -146,8 +160,9 @@ export function useNFTMint() {
    * Withdraw contract balance (owner only)
    */
   const withdraw = async () => {
+    if (!contractAddress) throw new Error('No contract on this chain')
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: contractAddress,
       abi: PUBLIC_MINT_ERC1155_ABI,
       functionName: 'withdraw',
       args: [],
@@ -171,7 +186,7 @@ export function useNFTMint() {
     error,
     reset,
     // Contract info
-    contractAddress: CONTRACT_ADDRESS,
+    contractAddress,
     contractName,
     contractSymbol,
     contractOwner,
@@ -184,5 +199,7 @@ export function useNFTMint() {
     remainingMints,
     // User state
     isOwner,
+    // Chain info
+    chainId,
   }
 }
