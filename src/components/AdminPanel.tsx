@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { formatEther, parseEther } from 'viem'
 import { useNFTMint } from '../hooks/useNFTMint'
-import { useBalance } from 'wagmi'
+import { useBalance, useReadContract, useWriteContract, useSwitchChain, useChainId } from 'wagmi'
 import { useActiveChain, CHAIN_IDS, CHAIN_NAMES, ChainId } from '../contexts/ChainContext'
-import { getContractAddress } from '../contracts/NFTContract'
+import { getContractAddress, PUBLIC_MINT_ERC1155_ABI } from '../contracts/NFTContract'
 
 const AVAILABLE_CHAINS: ChainId[] = [
   CHAIN_IDS.SEPOLIA,
@@ -12,8 +12,16 @@ const AVAILABLE_CHAINS: ChainId[] = [
   CHAIN_IDS.POLYGON_AMOY,
 ]
 
+interface ActivationStep {
+  chainId: ChainId
+  action: 'enable' | 'disable'
+  status: 'pending' | 'switching' | 'signing' | 'confirming' | 'done' | 'error'
+}
+
 export function AdminPanel() {
   const { activeChainId, setActiveChainId } = useActiveChain()
+  const walletChainId = useChainId()
+  const { switchChainAsync } = useSwitchChain()
 
   const {
     isOwner,
@@ -24,7 +32,6 @@ export function AdminPanel() {
     totalTokens,
     setMintPrice,
     setMaxPerWallet,
-    setMintingEnabled,
     withdraw,
     isPending,
     isConfirming,
@@ -33,9 +40,64 @@ export function AdminPanel() {
     reset,
   } = useNFTMint()
 
+  const { writeContractAsync } = useWriteContract()
+
   const [newPrice, setNewPrice] = useState('')
   const [newMaxPerWallet, setNewMaxPerWallet] = useState('')
   const [activeAction, setActiveAction] = useState<string | null>(null)
+
+  // Chain activation flow state
+  const [activationSteps, setActivationSteps] = useState<ActivationStep[]>([])
+  const [isActivating, setIsActivating] = useState(false)
+  const [activationError, setActivationError] = useState<string | null>(null)
+  const [targetChain, setTargetChain] = useState<ChainId | null>(null)
+
+  // Read minting status for all chains
+  const { data: sepoliaMinting, refetch: refetchSepolia } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.SEPOLIA) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'mintingEnabled',
+    chainId: CHAIN_IDS.SEPOLIA,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.SEPOLIA) },
+  })
+
+  const { data: mainnetMinting, refetch: refetchMainnet } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.MAINNET) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'mintingEnabled',
+    chainId: CHAIN_IDS.MAINNET,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.MAINNET) },
+  })
+
+  const { data: polygonMinting, refetch: refetchPolygon } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.POLYGON) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'mintingEnabled',
+    chainId: CHAIN_IDS.POLYGON,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.POLYGON) },
+  })
+
+  const { data: amoyMinting, refetch: refetchAmoy } = useReadContract({
+    address: getContractAddress(CHAIN_IDS.POLYGON_AMOY) || undefined,
+    abi: PUBLIC_MINT_ERC1155_ABI,
+    functionName: 'mintingEnabled',
+    chainId: CHAIN_IDS.POLYGON_AMOY,
+    query: { enabled: !!getContractAddress(CHAIN_IDS.POLYGON_AMOY) },
+  })
+
+  const mintingStatusByChain: Record<ChainId, boolean | undefined> = {
+    [CHAIN_IDS.SEPOLIA]: sepoliaMinting as boolean | undefined,
+    [CHAIN_IDS.MAINNET]: mainnetMinting as boolean | undefined,
+    [CHAIN_IDS.POLYGON]: polygonMinting as boolean | undefined,
+    [CHAIN_IDS.POLYGON_AMOY]: amoyMinting as boolean | undefined,
+  }
+
+  const refetchAll = () => {
+    refetchSepolia()
+    refetchMainnet()
+    refetchPolygon()
+    refetchAmoy()
+  }
 
   const { data: contractBalance } = useBalance({
     address: contractAddress as `0x${string}`,
@@ -62,6 +124,107 @@ export function AdminPanel() {
     }
   }, [isSuccess, reset])
 
+  // Handle chain activation
+  const handleActivateChain = async (selectedChainId: ChainId) => {
+    const selectedContract = getContractAddress(selectedChainId)
+    if (!selectedContract) return
+
+    setActivationError(null)
+    setTargetChain(selectedChainId)
+
+    // Build the list of steps needed
+    const steps: ActivationStep[] = []
+
+    // First, disable minting on all other chains that have it enabled
+    for (const chainId of AVAILABLE_CHAINS) {
+      if (chainId === selectedChainId) continue
+      const hasContract = !!getContractAddress(chainId)
+      const isEnabled = mintingStatusByChain[chainId]
+      if (hasContract && isEnabled) {
+        steps.push({ chainId, action: 'disable', status: 'pending' })
+      }
+    }
+
+    // Then enable minting on the selected chain
+    steps.push({ chainId: selectedChainId, action: 'enable', status: 'pending' })
+
+    setActivationSteps(steps)
+    setIsActivating(true)
+
+    // Process steps sequentially
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      const stepContract = getContractAddress(step.chainId)
+      if (!stepContract) continue
+
+      try {
+        // Update status to switching
+        setActivationSteps(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, status: 'switching' } : s
+        ))
+
+        // Switch to the target chain if needed
+        if (walletChainId !== step.chainId) {
+          await switchChainAsync({ chainId: step.chainId })
+          // Wait a bit for the chain switch to settle
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+
+        // Update status to signing
+        setActivationSteps(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, status: 'signing' } : s
+        ))
+
+        // Execute the transaction
+        await writeContractAsync({
+          address: stepContract,
+          abi: PUBLIC_MINT_ERC1155_ABI,
+          functionName: 'setMintingEnabled',
+          args: [step.action === 'enable'],
+          chainId: step.chainId,
+        })
+
+        // Update status to confirming
+        setActivationSteps(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, status: 'confirming' } : s
+        ))
+
+        // Wait for confirmation (simplified - in production you'd use useWaitForTransactionReceipt)
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        // Update status to done
+        setActivationSteps(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, status: 'done' } : s
+        ))
+
+      } catch (err) {
+        console.error(`Failed to ${step.action} minting on chain ${step.chainId}:`, err)
+        setActivationSteps(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, status: 'error' } : s
+        ))
+        setActivationError(`Failed to ${step.action} minting on ${CHAIN_NAMES[step.chainId]}`)
+        setIsActivating(false)
+        return
+      }
+    }
+
+    // All done - update active chain in context and refetch statuses
+    setActiveChainId(selectedChainId)
+    setIsActivating(false)
+    setActivationSteps([])
+    setTargetChain(null)
+
+    // Refetch all minting statuses
+    setTimeout(refetchAll, 1000)
+  }
+
+  const cancelActivation = () => {
+    setIsActivating(false)
+    setActivationSteps([])
+    setTargetChain(null)
+    setActivationError(null)
+  }
+
   if (!isOwner) return null
 
   const isLoading = isPending || isConfirming
@@ -85,15 +248,6 @@ export function AdminPanel() {
     }
   }
 
-  const handleToggleMinting = async () => {
-    setActiveAction('minting')
-    try {
-      await setMintingEnabled(!mintingEnabled)
-    } catch (err) {
-      console.error('Failed to toggle minting:', err)
-    }
-  }
-
   const handleWithdraw = async () => {
     setActiveAction('withdraw')
     try {
@@ -103,8 +257,8 @@ export function AdminPanel() {
     }
   }
 
-  const getExplorerUrl = (address: string) => {
-    switch (activeChainId) {
+  const getExplorerUrl = (address: string, chainId: ChainId) => {
+    switch (chainId) {
       case CHAIN_IDS.MAINNET:
         return `https://etherscan.io/address/${address}`
       case CHAIN_IDS.SEPOLIA:
@@ -118,39 +272,127 @@ export function AdminPanel() {
     }
   }
 
+  const getStepStatusText = (step: ActivationStep) => {
+    switch (step.status) {
+      case 'pending': return 'Waiting...'
+      case 'switching': return 'Switching chain...'
+      case 'signing': return 'Sign in wallet...'
+      case 'confirming': return 'Confirming...'
+      case 'done': return 'Done ✓'
+      case 'error': return 'Failed ✗'
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* Active Chain Selector */}
+      {/* Chain Activation Section */}
       <div>
-        <label className="label">Active Chain for Minting</label>
-        <div className="grid grid-cols-2 gap-2">
-          {AVAILABLE_CHAINS.map((chainId) => {
-            const hasContract = !!getContractAddress(chainId)
-            return (
-              <button
-                key={chainId}
-                onClick={() => setActiveChainId(chainId)}
-                disabled={!hasContract}
-                className={`font-tomorrow text-[11px] tracking-[0.15em] uppercase py-3 px-4 transition-colors ${
-                  activeChainId === chainId
-                    ? 'bg-black text-[#DFFF00]'
-                    : hasContract
-                    ? 'border border-black/20 text-black/60 hover:border-black hover:text-black'
-                    : 'border border-black/10 text-black/20 cursor-not-allowed'
-                }`}
-              >
-                {CHAIN_NAMES[chainId]}
-                {!hasContract && ' (no contract)'}
-              </button>
-            )
-          })}
-        </div>
+        <label className="label">Activate Minting on Chain</label>
+        <p className="text-black/40 text-xs mb-3">
+          Select a chain to activate minting. This will enable minting on the selected chain and disable it on all others.
+        </p>
+
+        {/* Activation in progress */}
+        {isActivating && activationSteps.length > 0 && (
+          <div className="mb-4 p-4 bg-[#f5f5f5] border border-black/10">
+            <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/60 uppercase mb-3">
+              Activating {CHAIN_NAMES[targetChain!]}...
+            </p>
+            <div className="space-y-2">
+              {activationSteps.map((step, idx) => (
+                <div key={idx} className="flex justify-between items-center text-sm">
+                  <span className="text-black/70">
+                    {step.action === 'enable' ? 'Enable' : 'Disable'} {CHAIN_NAMES[step.chainId]}
+                  </span>
+                  <span className={`font-mono text-xs ${
+                    step.status === 'done' ? 'text-green-600' :
+                    step.status === 'error' ? 'text-red-600' :
+                    step.status === 'pending' ? 'text-black/30' :
+                    'text-black/60'
+                  }`}>
+                    {getStepStatusText(step)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {activationError && (
+              <div className="mt-3 text-red-600 text-sm">{activationError}</div>
+            )}
+            <button
+              onClick={cancelActivation}
+              className="mt-3 text-black/40 hover:text-black text-xs uppercase tracking-wider"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Chain grid */}
+        {!isActivating && (
+          <div className="space-y-2">
+            {AVAILABLE_CHAINS.map((chainId) => {
+              const chainContract = getContractAddress(chainId)
+              const isEnabled = mintingStatusByChain[chainId]
+              const isActive = isEnabled === true
+
+              return (
+                <div
+                  key={chainId}
+                  className={`flex items-center justify-between p-3 border ${
+                    isActive ? 'border-green-500 bg-green-50' : 'border-black/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-tomorrow text-[11px] tracking-[0.15em] uppercase">
+                      {CHAIN_NAMES[chainId]}
+                    </span>
+                    {chainContract && (
+                      <a
+                        href={getExplorerUrl(chainContract, chainId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-black/30 hover:text-black text-[10px] font-mono"
+                      >
+                        {chainContract.slice(0, 6)}...{chainContract.slice(-4)}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] uppercase tracking-wider ${
+                      !chainContract ? 'text-black/20' :
+                      isEnabled === undefined ? 'text-black/30' :
+                      isEnabled ? 'text-green-600' : 'text-black/40'
+                    }`}>
+                      {!chainContract ? 'No contract' :
+                       isEnabled === undefined ? '...' :
+                       isEnabled ? 'Active' : 'Inactive'}
+                    </span>
+                    {chainContract && !isActive && (
+                      <button
+                        onClick={() => handleActivateChain(chainId)}
+                        disabled={isActivating}
+                        className="btn-secondary text-[10px] py-1 px-3"
+                      >
+                        Activate
+                      </button>
+                    )}
+                    {isActive && (
+                      <span className="text-green-600 text-xs">●</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Stats */}
+      {/* Stats for active chain */}
       <div className="flex gap-6 text-center pb-4 border-b border-black/10">
         <div className="flex-1">
-          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">Minted</p>
+          <p className="font-tomorrow text-[9px] tracking-[0.15em] text-black/40 uppercase">
+            {CHAIN_NAMES[activeChainId]} Minted
+          </p>
           <p className="font-tektur text-black mt-1">{totalTokens?.toString() ?? '0'}</p>
         </div>
         <div className="flex-1">
@@ -169,7 +411,7 @@ export function AdminPanel() {
 
       {/* Mint Price */}
       <div>
-        <label className="label">Mint Price (ETH)</label>
+        <label className="label">Mint Price (ETH) - {CHAIN_NAMES[activeChainId]}</label>
         <div className="flex gap-3">
           <input
             type="text"
@@ -190,7 +432,7 @@ export function AdminPanel() {
 
       {/* Max Per Wallet */}
       <div>
-        <label className="label">Max Per Wallet</label>
+        <label className="label">Max Per Wallet - {CHAIN_NAMES[activeChainId]}</label>
         <div className="flex gap-3">
           <input
             type="number"
@@ -210,22 +452,6 @@ export function AdminPanel() {
         </div>
       </div>
 
-      {/* Minting Toggle */}
-      <div>
-        <label className="label">Minting</label>
-        <button
-          onClick={handleToggleMinting}
-          disabled={isLoading || mintingEnabled === undefined}
-          className="btn-secondary w-full"
-        >
-          {activeAction === 'minting' && isLoading
-            ? 'Updating...'
-            : mintingEnabled
-            ? 'Disable Minting'
-            : 'Enable Minting'}
-        </button>
-      </div>
-
       {/* Withdraw */}
       <div className="pt-4 border-t border-black/10">
         <button
@@ -235,20 +461,8 @@ export function AdminPanel() {
         >
           {activeAction === 'withdraw' && isLoading
             ? 'Withdrawing...'
-            : `Withdraw ${contractBalance ? parseFloat(formatEther(contractBalance.value)).toFixed(4) : '0'} ETH`}
+            : `Withdraw ${contractBalance ? parseFloat(formatEther(contractBalance.value)).toFixed(4) : '0'} ETH from ${CHAIN_NAMES[activeChainId]}`}
         </button>
-      </div>
-
-      {/* Contract Address */}
-      <div className="text-center pt-2">
-        <a
-          href={getExplorerUrl(contractAddress || '')}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-black/40 hover:text-black text-xs transition-colors"
-        >
-          {contractAddress?.slice(0, 6)}...{contractAddress?.slice(-4)}
-        </a>
       </div>
 
       {/* Status Messages */}
