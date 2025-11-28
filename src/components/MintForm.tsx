@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { formatEther } from 'viem'
 import { FileUpload } from './FileUpload'
@@ -20,6 +20,7 @@ export function MintForm() {
   const [attributes, setAttributes] = useState<Attribute[]>([])
   const [newTraitType, setNewTraitType] = useState('')
   const [newTraitValue, setNewTraitValue] = useState('')
+  const [showMintedOverlay, setShowMintedOverlay] = useState(false)
 
   const { uploadToIPFS, isUploading, error: uploadError } = useIPFSUpload()
   const {
@@ -36,6 +37,13 @@ export function MintForm() {
     totalTokens,
     remainingMints,
   } = useNFTMint()
+
+  // Show overlay when mint succeeds
+  useEffect(() => {
+    if (isSuccess) {
+      setShowMintedOverlay(true)
+    }
+  }, [isSuccess])
 
   const addAttribute = () => {
     if (newTraitType && newTraitValue) {
@@ -93,8 +101,26 @@ export function MintForm() {
   }
 
   return (
-    <div className="space-y-6">
-      <FileUpload onFileSelect={setFile} selectedFile={file} />
+    <>
+      {/* MINTED! Overlay */}
+      {showMintedOverlay && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black flex items-center justify-center cursor-pointer animate-fade-in"
+          onClick={() => setShowMintedOverlay(false)}
+        >
+          <div className="text-center">
+            <h1 className="font-tektur text-[#DFFF00] text-6xl sm:text-8xl md:text-9xl font-bold tracking-wider animate-pulse-slow">
+              MINTED!
+            </h1>
+            <p className="font-tomorrow text-white/40 text-xs sm:text-sm mt-6 tracking-[0.3em] uppercase">
+              Click anywhere to continue
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        <FileUpload onFileSelect={setFile} selectedFile={file} />
 
       <div>
         <label className="label">Title</label>
@@ -242,6 +268,7 @@ export function MintForm() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   )
 }
