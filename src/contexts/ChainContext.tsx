@@ -19,26 +19,10 @@ const CHAIN_NAMES: Record<ChainId, string> = {
 
 const ChainContext = createContext<ChainContextType | null>(null)
 
-const STORAGE_KEY = 'mgxs-active-chain'
-
 export function ChainProvider({ children }: { children: ReactNode }) {
-  const [activeChainId, setActiveChainIdState] = useState<ChainId>(() => {
-    // Load from localStorage on init
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = parseInt(stored, 10)
-        if (Object.values(CHAIN_IDS).includes(parsed as ChainId)) {
-          return parsed as ChainId
-        }
-      }
-    }
-    return CHAIN_IDS.SEPOLIA // Default to Sepolia
-  })
+  const [activeChainId, setActiveChainId] = useState<ChainId>(CHAIN_IDS.SEPOLIA)
 
-  const [hasAutoSynced, setHasAutoSynced] = useState(false)
-
-  // Read minting status from all chains to auto-sync
+  // Read minting status from all chains to auto-detect active chain
   const { data: sepoliaMinting } = useReadContract({
     address: getContractAddress(CHAIN_IDS.SEPOLIA) || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
@@ -71,10 +55,8 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     query: { enabled: !!getContractAddress(CHAIN_IDS.POLYGON_AMOY) },
   })
 
-  // Auto-sync to a chain with minting enabled on initial load
+  // Auto-detect chain with minting enabled
   useEffect(() => {
-    if (hasAutoSynced) return
-
     const mintingStatus: Record<ChainId, boolean | undefined> = {
       [CHAIN_IDS.SEPOLIA]: sepoliaMinting as boolean | undefined,
       [CHAIN_IDS.MAINNET]: mainnetMinting as boolean | undefined,
@@ -82,17 +64,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
       [CHAIN_IDS.POLYGON_AMOY]: amoyMinting as boolean | undefined,
     }
 
-    // Check if we have loaded at least some minting statuses
-    const loadedStatuses = Object.values(mintingStatus).filter(s => s !== undefined)
-    if (loadedStatuses.length === 0) return
-
-    // If current chain has minting enabled, we're good
-    if (mintingStatus[activeChainId] === true) {
-      setHasAutoSynced(true)
-      return
-    }
-
-    // Find a chain with minting enabled
+    // Find the chain with minting enabled (priority: Mainnet > Polygon > Sepolia > Amoy)
     const chainPriority: ChainId[] = [
       CHAIN_IDS.MAINNET,
       CHAIN_IDS.POLYGON,
@@ -102,22 +74,13 @@ export function ChainProvider({ children }: { children: ReactNode }) {
 
     for (const chainId of chainPriority) {
       if (mintingStatus[chainId] === true && getContractAddress(chainId)) {
-        console.log(`Auto-syncing to ${CHAIN_NAMES[chainId]} (minting enabled)`)
-        setActiveChainIdState(chainId)
-        localStorage.setItem(STORAGE_KEY, chainId.toString())
-        setHasAutoSynced(true)
+        if (activeChainId !== chainId) {
+          setActiveChainId(chainId)
+        }
         return
       }
     }
-
-    // No chain with minting enabled found, keep current
-    setHasAutoSynced(true)
-  }, [sepoliaMinting, mainnetMinting, polygonMinting, amoyMinting, activeChainId, hasAutoSynced])
-
-  const setActiveChainId = (chainId: ChainId) => {
-    setActiveChainIdState(chainId)
-    localStorage.setItem(STORAGE_KEY, chainId.toString())
-  }
+  }, [sepoliaMinting, mainnetMinting, polygonMinting, amoyMinting, activeChainId])
 
   const chainName = CHAIN_NAMES[activeChainId] || 'Unknown'
 
