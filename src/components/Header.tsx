@@ -1,6 +1,19 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 
-export function Header() {
+export type Section = 'mint' | 'soulbound' | 'gallery'
+
+interface HeaderProps {
+  activeSection: Section
+  onSectionChange: (section: Section) => void
+}
+
+export function Header({ activeSection, onSectionChange }: HeaderProps) {
+  const sections: { id: Section; label: string }[] = [
+    { id: 'mint', label: 'Mint' },
+    { id: 'soulbound', label: 'Soulbound' },
+    { id: 'gallery', label: 'Gallery' },
+  ]
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-lime/95 backdrop-blur-sm">
       <div className="max-w-[1440px] mx-auto px-[6vw] md:px-[4vw] py-4 flex items-center justify-between">
@@ -17,31 +30,25 @@ export function Header() {
           />
         </a>
 
-        <nav className="hidden md:flex items-center gap-8">
-          <a
-            href="https://www.mgxs.co/art"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-tomorrow text-[11px] tracking-[0.15em] text-black/70 hover:text-black transition-colors duration-300 uppercase"
-          >
-            Art
-          </a>
-          <a
-            href="https://www.mgxs.co/projects"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-tomorrow text-[11px] tracking-[0.15em] text-black/70 hover:text-black transition-colors duration-300 uppercase"
-          >
-            Projects
-          </a>
-          <a
-            href="https://www.mgxs.co/about"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-tomorrow text-[11px] tracking-[0.15em] text-black/70 hover:text-black transition-colors duration-300 uppercase"
-          >
-            About
-          </a>
+        {/* Section Navigation */}
+        <nav className="flex items-center gap-2">
+          {sections.map((section, index) => (
+            <span key={section.id} className="flex items-center">
+              <button
+                onClick={() => onSectionChange(section.id)}
+                className={`font-tomorrow text-[11px] tracking-[0.15em] transition-colors duration-300 uppercase ${
+                  activeSection === section.id
+                    ? 'text-black'
+                    : 'text-black/40 hover:text-black/70'
+                }`}
+              >
+                {section.label}
+              </button>
+              {index < sections.length - 1 && (
+                <span className="text-black/20 mx-3">|</span>
+              )}
+            </span>
+          ))}
         </nav>
 
         <ConnectButton.Custom>
