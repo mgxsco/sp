@@ -1,11 +1,13 @@
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi'
-import { SOULBOUND_MINT_ERC1155_ABI, DEFAULT_SOULBOUND_CONTRACT_ADDRESS } from '../contracts/SoulboundNFTContract'
-
-const CONTRACT_ADDRESS = (import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS || DEFAULT_SOULBOUND_CONTRACT_ADDRESS) as `0x${string}`
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from 'wagmi'
+import { SOULBOUND_ERC1155_ABI, getSoulboundContractAddress, CHAIN_IDS } from '../contracts/SoulboundContract'
 
 export function useSoulboundMint() {
   const { address } = useAccount()
+  const chainId = useChainId()
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract()
+
+  // Get contract address for current chain
+  const contractAddress = getSoulboundContractAddress(chainId)
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
@@ -13,173 +15,105 @@ export function useSoulboundMint() {
 
   // Get contract info
   const { data: contractName } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'name',
+    chainId,
+    query: { enabled: !!contractAddress },
   })
 
   const { data: contractSymbol } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'symbol',
+    chainId,
+    query: { enabled: !!contractAddress },
   })
 
   const { data: contractOwner } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'owner',
+    chainId,
+    query: { enabled: !!contractAddress },
   })
 
   const { data: mintPrice } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'mintPrice',
+    chainId,
+    query: { enabled: !!contractAddress },
   })
 
   const { data: maxPerWallet } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'maxPerWallet',
+    chainId,
+    query: { enabled: !!contractAddress },
   })
 
   const { data: mintingEnabled } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'mintingEnabled',
+    chainId,
+    query: { enabled: !!contractAddress },
   })
 
   const { data: totalTokens } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'totalTokens',
-  })
-
-  const { data: nextTokenId } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
-    functionName: 'nextTokenId',
+    chainId,
+    query: { enabled: !!contractAddress },
   })
 
   const { data: remainingMints } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: SOULBOUND_MINT_ERC1155_ABI,
+    address: contractAddress || undefined,
+    abi: SOULBOUND_ERC1155_ABI,
     functionName: 'remainingMintsForWallet',
     args: address ? [address] : undefined,
+    chainId,
+    query: { enabled: !!contractAddress && !!address },
   })
 
   const isOwner = address && contractOwner ? address.toLowerCase() === contractOwner.toLowerCase() : false
 
-  // ============ Public Functions ============
-
   /**
-   * Mint a NEW token with your own URI - anyone can call this
+   * Mint a NEW soulbound token with your own URI - anyone can call this
+   * Token will be bound to the minting wallet forever (non-transferable)
    */
   const mintNew = async (tokenURI: string) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('Soulbound contract address not configured')
+    if (!contractAddress) {
+      throw new Error('Soulbound contract not deployed on this chain')
     }
 
     writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: SOULBOUND_MINT_ERC1155_ABI,
+      address: contractAddress,
+      abi: SOULBOUND_ERC1155_ABI,
       functionName: 'mintNew',
       args: [tokenURI],
       value: mintPrice || 0n,
+      chainId,
     })
   }
 
-  /**
-   * Burn a token - only token owner can call this
-   */
-  const burn = async (tokenId: bigint) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('Soulbound contract address not configured')
+  // Get chain name for display
+  const getChainName = () => {
+    switch (chainId) {
+      case CHAIN_IDS.MAINNET: return 'Ethereum'
+      case CHAIN_IDS.SEPOLIA: return 'Sepolia'
+      case CHAIN_IDS.POLYGON: return 'Polygon'
+      case CHAIN_IDS.POLYGON_AMOY: return 'Polygon Amoy'
+      default: return 'Unknown'
     }
-
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: SOULBOUND_MINT_ERC1155_ABI,
-      functionName: 'burn',
-      args: [tokenId],
-    })
-  }
-
-  // ============ Owner Functions ============
-
-  /**
-   * Owner mint new token (bypasses payment)
-   */
-  const ownerMintNew = async (toAddress: `0x${string}`, tokenURI: string) => {
-    if (!CONTRACT_ADDRESS) {
-      throw new Error('Soulbound contract address not configured')
-    }
-
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: SOULBOUND_MINT_ERC1155_ABI,
-      functionName: 'ownerMintNew',
-      args: [toAddress, tokenURI],
-    })
-  }
-
-  /**
-   * Set mint price (owner only)
-   */
-  const setMintPrice = async (price: bigint) => {
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: SOULBOUND_MINT_ERC1155_ABI,
-      functionName: 'setMintPrice',
-      args: [price],
-    })
-  }
-
-  /**
-   * Set max per wallet (owner only)
-   */
-  const setMaxPerWallet = async (limit: bigint) => {
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: SOULBOUND_MINT_ERC1155_ABI,
-      functionName: 'setMaxPerWallet',
-      args: [limit],
-    })
-  }
-
-  /**
-   * Enable/disable minting (owner only)
-   */
-  const setMintingEnabled = async (enabled: boolean) => {
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: SOULBOUND_MINT_ERC1155_ABI,
-      functionName: 'setMintingEnabled',
-      args: [enabled],
-    })
-  }
-
-  /**
-   * Withdraw contract balance (owner only)
-   */
-  const withdraw = async () => {
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: SOULBOUND_MINT_ERC1155_ABI,
-      functionName: 'withdraw',
-      args: [],
-    })
   }
 
   return {
-    // Public functions
+    // Public function
     mintNew,
-    burn,
-    // Owner functions
-    ownerMintNew,
-    setMintPrice,
-    setMaxPerWallet,
-    setMintingEnabled,
-    withdraw,
     // Transaction state
     hash,
     isPending,
@@ -188,7 +122,7 @@ export function useSoulboundMint() {
     error,
     reset,
     // Contract info
-    contractAddress: CONTRACT_ADDRESS,
+    contractAddress,
     contractName,
     contractSymbol,
     contractOwner,
@@ -197,9 +131,11 @@ export function useSoulboundMint() {
     maxPerWallet,
     mintingEnabled,
     totalTokens,
-    nextTokenId,
     remainingMints,
     // User state
     isOwner,
+    // Chain info
+    chainId,
+    chainName: getChainName(),
   }
 }

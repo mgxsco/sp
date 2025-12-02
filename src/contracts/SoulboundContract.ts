@@ -1,6 +1,6 @@
-// PublicMintERC1155 ABI - Anyone can mint new NFTs
-// Deploy using contracts/PublicMintERC1155.sol
-export const PUBLIC_MINT_ERC1155_ABI = [
+// SoulboundERC1155 ABI - Soulbound NFTs (no transfers)
+// Deploy using contracts/SoulboundERC1155.sol
+export const SOULBOUND_ERC1155_ABI = [
   // ============ Public Minting ============
   {
     inputs: [{ name: 'tokenURI', type: 'string' }],
@@ -169,6 +169,13 @@ export const PUBLIC_MINT_ERC1155_ABI = [
     stateMutability: 'view',
     type: 'function'
   },
+  {
+    inputs: [],
+    name: 'isSoulbound',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'pure',
+    type: 'function'
+  },
 
   // ============ Events ============
   {
@@ -195,7 +202,7 @@ export const PUBLIC_MINT_ERC1155_ABI = [
   }
 ] as const
 
-// Chain IDs
+// Chain IDs (same as NFTContract)
 export const CHAIN_IDS = {
   MAINNET: 1,
   SEPOLIA: 11155111,
@@ -203,19 +210,16 @@ export const CHAIN_IDS = {
   POLYGON_AMOY: 80002,
 } as const
 
-// Contract addresses per chain - Update after deploying your contracts
-export const CONTRACT_ADDRESSES: Record<number, `0x${string}` | ''> = {
-  [CHAIN_IDS.MAINNET]: (import.meta.env.VITE_CONTRACT_MAINNET || '') as `0x${string}`,
-  [CHAIN_IDS.SEPOLIA]: (import.meta.env.VITE_CONTRACT_SEPOLIA || '') as `0x${string}`,
-  [CHAIN_IDS.POLYGON]: (import.meta.env.VITE_CONTRACT_POLYGON || '') as `0x${string}`,
-  [CHAIN_IDS.POLYGON_AMOY]: (import.meta.env.VITE_CONTRACT_POLYGON_AMOY || '') as `0x${string}`,
+// Soulbound contract addresses per chain
+export const SOULBOUND_CONTRACT_ADDRESSES: Record<number, `0x${string}` | ''> = {
+  [CHAIN_IDS.MAINNET]: (import.meta.env.VITE_SOULBOUND_CONTRACT_MAINNET || '') as `0x${string}`,
+  [CHAIN_IDS.SEPOLIA]: (import.meta.env.VITE_SOULBOUND_CONTRACT_SEPOLIA || '') as `0x${string}`,
+  [CHAIN_IDS.POLYGON]: (import.meta.env.VITE_SOULBOUND_CONTRACT_POLYGON || '') as `0x${string}`,
+  [CHAIN_IDS.POLYGON_AMOY]: (import.meta.env.VITE_SOULBOUND_CONTRACT_POLYGON_AMOY || '') as `0x${string}`,
 }
 
-// Legacy fallback - for backwards compatibility
-export const DEFAULT_CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || '') as `0x${string}`
-
-// Get contract address for a specific chain
-export function getContractAddress(chainId: number): `0x${string}` | null {
-  const address = CONTRACT_ADDRESSES[chainId] || DEFAULT_CONTRACT_ADDRESS
+// Get soulbound contract address for a specific chain
+export function getSoulboundContractAddress(chainId: number): `0x${string}` | null {
+  const address = SOULBOUND_CONTRACT_ADDRESSES[chainId]
   return address && address.length > 0 ? address : null
 }

@@ -1,54 +1,71 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 
-export type Section = 'mint' | 'soulbound' | 'gallery'
-
 interface HeaderProps {
-  activeSection: Section
-  onSectionChange: (section: Section) => void
+  activeTab: 'mint' | 'soulbound' | 'gallery' | 'admin'
+  setActiveTab: (tab: 'mint' | 'soulbound' | 'gallery' | 'admin') => void
+  isOwner: boolean
 }
 
-export function Header({ activeSection, onSectionChange }: HeaderProps) {
-  const sections: { id: Section; label: string }[] = [
-    { id: 'mint', label: 'Mint' },
-    { id: 'soulbound', label: 'Soulbound' },
-    { id: 'gallery', label: 'Gallery' },
-  ]
-
+export function Header({ activeTab, setActiveTab, isOwner }: HeaderProps) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-lime/95 backdrop-blur-sm">
-      <div className="max-w-[1440px] mx-auto px-[6vw] md:px-[4vw] py-4 flex items-center justify-between">
+    <header className="bg-white shadow-sm">
+      <div className="max-w-[800px] mx-auto px-6 py-4 flex items-center justify-between">
         <a
           href="https://www.mgxs.co"
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:opacity-70 transition-opacity duration-300"
+          className="hover:opacity-70 transition-opacity"
         >
           <img
             src="https://images.squarespace-cdn.com/content/v1/6571e36aba71cb56d944e911/a11fb335-c0f5-42cf-bc6c-acf2330c6c48/MGXS_LOGO_BK.png"
             alt="MGXS"
-            className="h-8 md:h-10 w-auto"
+            className="h-6 w-auto"
           />
         </a>
 
-        {/* Section Navigation */}
-        <nav className="flex items-center gap-2">
-          {sections.map((section, index) => (
-            <span key={section.id} className="flex items-center">
-              <button
-                onClick={() => onSectionChange(section.id)}
-                className={`font-tomorrow text-[11px] tracking-[0.15em] transition-colors duration-300 uppercase ${
-                  activeSection === section.id
-                    ? 'text-black'
-                    : 'text-black/40 hover:text-black/70'
-                }`}
-              >
-                {section.label}
-              </button>
-              {index < sections.length - 1 && (
-                <span className="text-black/20 mx-3">|</span>
-              )}
-            </span>
-          ))}
+        <nav className="flex items-center gap-1">
+          <button
+            onClick={() => setActiveTab('mint')}
+            className={`font-tomorrow text-[11px] tracking-[0.15em] uppercase px-4 py-2 transition-colors ${
+              activeTab === 'mint'
+                ? 'bg-black text-[#DFFF00]'
+                : 'text-black/60 hover:text-black'
+            }`}
+          >
+            Mint
+          </button>
+          <button
+            onClick={() => setActiveTab('soulbound')}
+            className={`font-tomorrow text-[11px] tracking-[0.15em] uppercase px-4 py-2 transition-colors ${
+              activeTab === 'soulbound'
+                ? 'bg-black text-[#DFFF00]'
+                : 'text-black/60 hover:text-black'
+            }`}
+          >
+            Soulbound
+          </button>
+          <button
+            onClick={() => setActiveTab('gallery')}
+            className={`font-tomorrow text-[11px] tracking-[0.15em] uppercase px-4 py-2 transition-colors ${
+              activeTab === 'gallery'
+                ? 'bg-black text-[#DFFF00]'
+                : 'text-black/60 hover:text-black'
+            }`}
+          >
+            Gallery
+          </button>
+          {isOwner && (
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`font-tomorrow text-[11px] tracking-[0.15em] uppercase px-4 py-2 transition-colors ${
+                activeTab === 'admin'
+                  ? 'bg-black text-[#DFFF00]'
+                  : 'text-black/60 hover:text-black'
+              }`}
+            >
+              Admin
+            </button>
+          )}
         </nav>
 
         <ConnectButton.Custom>
@@ -73,13 +90,14 @@ export function Header({ activeSection, onSectionChange }: HeaderProps) {
                     userSelect: 'none',
                   },
                 })}
+                className="flex items-center gap-3"
               >
                 {(() => {
                   if (!connected) {
                     return (
                       <button
                         onClick={openConnectModal}
-                        className="font-tomorrow text-[11px] tracking-[0.15em] text-black/60 hover:text-black transition-colors duration-300 uppercase"
+                        className="font-tomorrow text-[11px] tracking-[0.15em] text-black/60 hover:text-black transition-colors uppercase"
                       >
                         Connect
                       </button>
@@ -90,7 +108,7 @@ export function Header({ activeSection, onSectionChange }: HeaderProps) {
                     return (
                       <button
                         onClick={openChainModal}
-                        className="font-tomorrow text-[11px] tracking-[0.15em] text-red-600 hover:text-red-500 transition-colors duration-300 uppercase"
+                        className="font-tomorrow text-[11px] tracking-[0.15em] text-red-600 hover:text-red-500 transition-colors uppercase"
                       >
                         Wrong Network
                       </button>
@@ -98,20 +116,23 @@ export function Header({ activeSection, onSectionChange }: HeaderProps) {
                   }
 
                   return (
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={openChainModal}
-                        className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 hover:text-black transition-colors duration-300 uppercase"
-                      >
-                        {chain.name}
-                      </button>
+                    <>
+                      {/* Chain selector - only for admin */}
+                      {isOwner && (
+                        <button
+                          onClick={openChainModal}
+                          className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 hover:text-black transition-colors uppercase"
+                        >
+                          {chain.name}
+                        </button>
+                      )}
                       <button
                         onClick={openAccountModal}
-                        className="font-tomorrow text-[11px] tracking-[0.15em] text-black/60 hover:text-black transition-colors duration-300"
+                        className="font-tomorrow text-[11px] tracking-[0.15em] text-black/60 hover:text-black transition-colors"
                       >
                         {account.displayName}
                       </button>
-                    </div>
+                    </>
                   )
                 })()}
               </div>

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useReadContracts, useAccount } from 'wagmi'
-import { PUBLIC_MINT_ERC1155_ABI, getContractAddress } from '../contracts/NFTContract'
-import { useActiveChain } from '../contexts/ChainContext'
+import { useReadContracts, useAccount, useChainId } from 'wagmi'
+import { SOULBOUND_ERC1155_ABI, getSoulboundContractAddress, CHAIN_IDS } from '../contracts/SoulboundContract'
 
 interface NFTMetadata {
   name: string
@@ -39,12 +38,18 @@ function NFTModal({ item, onClose }: { item: NFTItem; onClose: () => void }) {
         className="bg-white max-w-2xl w-full max-h-[90vh] overflow-auto shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-[#1a1a1a] aspect-square flex items-center justify-center">
+        <div className="bg-[#1a1a1a] aspect-square flex items-center justify-center relative">
           <img
             src={imageUrl}
             alt={item.metadata.name}
             className="max-w-full max-h-full object-contain"
           />
+          {/* Soulbound badge */}
+          <div className="absolute top-3 left-3 bg-black/80 px-2 py-1">
+            <p className="font-tomorrow text-[8px] tracking-[0.2em] text-[#DFFF00] uppercase">
+              Soulbound
+            </p>
+          </div>
         </div>
 
         <div className="p-6">
@@ -66,7 +71,7 @@ function NFTModal({ item, onClose }: { item: NFTItem; onClose: () => void }) {
           {item.creator && (
             <div className="mb-6">
               <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase mb-2">
-                Creator
+                Bound To
               </p>
               <p className="text-black/80 text-sm font-mono">{shortenAddress(item.creator)}</p>
             </div>
@@ -96,6 +101,12 @@ function NFTModal({ item, onClose }: { item: NFTItem; onClose: () => void }) {
               </div>
             </div>
           )}
+
+          <div className="mt-6 pt-4 border-t border-black/10">
+            <p className="text-black/30 text-[10px] text-center">
+              This NFT is permanently bound and cannot be transferred
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -127,7 +138,7 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
 
   return (
     <div className="cursor-pointer group" onClick={onClick}>
-      <div className="bg-[#1a1a1a] aspect-square overflow-hidden">
+      <div className="bg-[#1a1a1a] aspect-square overflow-hidden relative">
         <img
           src={imageUrl}
           alt={item.metadata.name}
@@ -138,6 +149,12 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
             img.style.display = 'none'
           }}
         />
+        {/* Soulbound badge */}
+        <div className="absolute top-2 left-2 bg-black/70 px-1.5 py-0.5">
+          <p className="font-tomorrow text-[6px] tracking-[0.15em] text-[#DFFF00] uppercase">
+            Bound
+          </p>
+        </div>
       </div>
       <div className="mt-2">
         <p className="text-black text-sm truncate group-hover:text-black/70 transition-colors">
@@ -154,30 +171,40 @@ function NFTCard({ item, onClick }: { item: NFTItem; onClick: () => void }) {
   )
 }
 
-export function Gallery() {
+export function SoulboundGallery() {
   const { address } = useAccount()
-  const { activeChainId } = useActiveChain()
-  const contractAddress = getContractAddress(activeChainId)
+  const chainId = useChainId()
+  const contractAddress = getSoulboundContractAddress(chainId)
 
   const [nfts, setNfts] = useState<NFTItem[]>([])
   const [selectedNFT, setSelectedNFT] = useState<NFTItem | null>(null)
   const [tokenIds, setTokenIds] = useState<number[]>([])
   const [showOnlyMine, setShowOnlyMine] = useState(false)
 
+  const getChainName = () => {
+    switch (chainId) {
+      case CHAIN_IDS.MAINNET: return 'Ethereum'
+      case CHAIN_IDS.SEPOLIA: return 'Sepolia'
+      case CHAIN_IDS.POLYGON: return 'Polygon'
+      case CHAIN_IDS.POLYGON_AMOY: return 'Polygon Amoy'
+      default: return 'Unknown'
+    }
+  }
+
   // Get total tokens to know how many NFTs exist
   const { data: contractData } = useReadContracts({
     contracts: [
       {
         address: contractAddress || undefined,
-        abi: PUBLIC_MINT_ERC1155_ABI,
+        abi: SOULBOUND_ERC1155_ABI,
         functionName: 'totalTokens',
-        chainId: activeChainId,
+        chainId,
       },
       {
         address: contractAddress || undefined,
-        abi: PUBLIC_MINT_ERC1155_ABI,
+        abi: SOULBOUND_ERC1155_ABI,
         functionName: 'nextTokenId',
-        chainId: activeChainId,
+        chainId,
       },
     ],
   })
@@ -202,17 +229,17 @@ export function Gallery() {
     contracts: tokenIds.flatMap((id) => [
       {
         address: contractAddress || undefined,
-        abi: PUBLIC_MINT_ERC1155_ABI,
+        abi: SOULBOUND_ERC1155_ABI,
         functionName: 'uri',
         args: [BigInt(id)],
-        chainId: activeChainId,
+        chainId,
       },
       {
         address: contractAddress || undefined,
-        abi: PUBLIC_MINT_ERC1155_ABI,
+        abi: SOULBOUND_ERC1155_ABI,
         functionName: 'tokenCreator',
         args: [BigInt(id)],
-        chainId: activeChainId,
+        chainId,
       },
     ]),
   })
@@ -266,7 +293,7 @@ export function Gallery() {
   if (!contractAddress) {
     return (
       <div className="text-center py-12">
-        <p className="text-black/40">No contract deployed on this chain</p>
+        <p className="text-black/40">No soulbound contract on {getChainName()}</p>
       </div>
     )
   }
@@ -274,7 +301,7 @@ export function Gallery() {
   if (!totalTokens || totalTokens === 0n) {
     return (
       <div className="text-center py-12">
-        <p className="text-black/40">No artworks minted yet</p>
+        <p className="text-black/40">No soulbound tokens minted yet</p>
       </div>
     )
   }
@@ -283,7 +310,7 @@ export function Gallery() {
     <div>
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-black/10">
         <p className="font-tomorrow text-[10px] tracking-[0.15em] text-black/40 uppercase">
-          {showOnlyMine ? 'My Artworks' : 'Latest Artworks'}
+          {showOnlyMine ? 'My Soulbound' : 'Soulbound Gallery'}
         </p>
         <div className="flex items-center gap-4">
           {address && (
@@ -305,7 +332,7 @@ export function Gallery() {
       {filteredNfts.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-black/40">
-            {showOnlyMine ? 'You haven\'t minted any artworks yet' : 'No artworks found'}
+            {showOnlyMine ? 'You haven\'t minted any soulbound tokens yet' : 'No tokens found'}
           </p>
         </div>
       ) : (
