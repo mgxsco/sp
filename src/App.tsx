@@ -4,9 +4,10 @@ import { Header } from './components/Header'
 import { MintForm } from './components/MintForm'
 import { AdminPanel } from './components/AdminPanel'
 import { Gallery } from './components/Gallery'
+import { SoulboundMintForm } from './components/SoulboundMintForm'
 import { getContractAddress, PUBLIC_MINT_ERC1155_ABI, CHAIN_IDS } from './contracts/NFTContract'
 
-type Tab = 'mint' | 'gallery' | 'admin'
+type Tab = 'mint' | 'soulbound' | 'gallery' | 'admin'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('mint')
@@ -60,6 +61,7 @@ function App() {
       <main className="flex-1 max-w-[800px] w-full mx-auto px-6 py-8">
         <div className="bg-white shadow-sm p-8">
           {activeTab === 'mint' && <MintForm />}
+          {activeTab === 'soulbound' && <SoulboundMintForm />}
           {activeTab === 'gallery' && <Gallery />}
           {activeTab === 'admin' && isOwnerOnAnyChain && <AdminPanel />}
         </div>

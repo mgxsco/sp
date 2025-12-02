@@ -1,8 +1,8 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 
 interface HeaderProps {
-  activeTab: 'mint' | 'gallery' | 'admin'
-  setActiveTab: (tab: 'mint' | 'gallery' | 'admin') => void
+  activeTab: 'mint' | 'soulbound' | 'gallery' | 'admin'
+  setActiveTab: (tab: 'mint' | 'soulbound' | 'gallery' | 'admin') => void
   isOwner: boolean
 }
 
@@ -33,6 +33,16 @@ export function Header({ activeTab, setActiveTab, isOwner }: HeaderProps) {
             }`}
           >
             Mint
+          </button>
+          <button
+            onClick={() => setActiveTab('soulbound')}
+            className={`font-tomorrow text-[11px] tracking-[0.15em] uppercase px-4 py-2 transition-colors ${
+              activeTab === 'soulbound'
+                ? 'bg-black text-[#DFFF00]'
+                : 'text-black/60 hover:text-black'
+            }`}
+          >
+            Soulbound
           </button>
           <button
             onClick={() => setActiveTab('gallery')}
