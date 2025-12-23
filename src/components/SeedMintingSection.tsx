@@ -162,7 +162,6 @@ function SeedMintSection() {
 function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateReturn }) {
   const { isConnected } = useAccount()
   const chainId = useChainId()
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [nftName, setNftName] = useState('')
   const [nftDescription, setNftDescription] = useState('')
 
@@ -187,11 +186,10 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
 
   const {
     generateImage,
-    generatedImages,
+    currentImage,
     attemptsRemaining,
     isGenerating,
     error: generateError,
-    discardImage,
     basePrompt,
     setBasePrompt,
   } = geminiState
@@ -220,20 +218,17 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
   }
 
   const handleMintRevealed = async () => {
-    if (!selectedImageId || !nftName) return
-
-    const selectedImage = generatedImages.find(img => img.id === selectedImageId)
-    if (!selectedImage) return
+    if (!currentImage || !nftName) return
 
     try {
       // Convert base64 to file and upload to IPFS
-      const file = base64ToFile(selectedImage.imageData, `${nftName.replace(/\s+/g, '_')}.png`)
+      const file = base64ToFile(currentImage.imageData, `${nftName.replace(/\s+/g, '_')}.png`)
       const { metadataUrl } = await uploadToIPFS(file, {
         name: nftName,
-        description: nftDescription || `Generated with prompt: ${selectedImage.prompt}`,
+        description: nftDescription || `Generated with prompt: ${currentImage.prompt}`,
         attributes: [
           { trait_type: 'Generator', value: 'Gemini' },
-          { trait_type: 'Prompt', value: selectedImage.prompt },
+          { trait_type: 'Prompt', value: currentImage.prompt },
         ],
       })
 
@@ -312,44 +307,24 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
             <p className="mb-4 text-red-600 text-sm">{generateError}</p>
           )}
 
-          {/* Generated Images Grid */}
-          {generatedImages.length > 0 && (
+          {/* Current Generated Image */}
+          {currentImage && (
             <div className="mb-6">
-              <h5 className="font-tomorrow text-[10px] text-black/40 uppercase mb-4">Generated Images</h5>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {generatedImages.map((img) => (
-                  <div
-                    key={img.id}
-                    className={`relative cursor-pointer border-2 transition-all ${
-                      selectedImageId === img.id ? 'border-lime' : 'border-transparent hover:border-black/20'
-                    }`}
-                    onClick={() => setSelectedImageId(img.id)}
-                  >
-                    <img
-                      src={img.imageData}
-                      alt="Generated"
-                      className="w-full aspect-square object-cover"
-                    />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        discardImage(img.id)
-                        if (selectedImageId === img.id) setSelectedImageId(null)
-                      }}
-                      className="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white text-xs hover:bg-black"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+              <h5 className="font-tomorrow text-[10px] text-black/40 uppercase mb-4">Generated Image</h5>
+              <div className="max-w-md mx-auto">
+                <img
+                  src={currentImage.imageData}
+                  alt="Generated"
+                  className="w-full aspect-square object-cover border border-black/10"
+                />
               </div>
             </div>
           )}
 
-          {/* Mint Selected */}
-          {selectedImageId && (
+          {/* Mint Current Image */}
+          {currentImage && (
             <div className="border-t border-black/10 pt-6">
-              <h4 className="font-tomorrow text-sm mb-4">Step 3: Mint Your Selection</h4>
+              <h4 className="font-tomorrow text-sm mb-4">Step 3: Mint This Image</h4>
               <div className="space-y-4 mb-4">
                 <div>
                   <label className="block font-tomorrow text-[10px] text-black/40 uppercase mb-2">Name *</label>
