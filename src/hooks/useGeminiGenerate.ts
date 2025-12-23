@@ -19,9 +19,11 @@ export interface UseGeminiGenerateReturn {
   discardImage: (imageId: string) => void
   discardAll: () => void
   resetAttempts: (burnTxHash: string) => Promise<boolean>
+  claimSession: () => Promise<boolean>
   setBasePrompt: (prompt: string) => void
   basePrompt: string
   fetchAttempts: () => Promise<void>
+  hasSession: boolean
 }
 
 const DEFAULT_PROMPT = 'nanobanana style abstract digital art, vibrant colors, geometric patterns'
@@ -150,6 +152,61 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     setCurrentImage(null)
   }, [])
 
+  // Claim a session for users who have attempts but no session token
+  const claimSession = useCallback(async (): Promise<boolean> => {
+    if (!address) {
+      setError('Wallet not connected')
+      return false
+    }
+
+    try {
+      // Create message to sign
+      const messageData = {
+        action: 'claim_session',
+        wallet: address,
+        timestamp: Date.now(),
+      }
+      const message = JSON.stringify(messageData)
+
+      // Sign the message
+      const signature = await signMessageAsync({ message })
+
+      // Call backend API
+      const response = await fetch('/api/claim-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: address,
+          signature,
+          message,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setAttemptsRemaining(data.attemptsRemaining)
+      setError(null)
+
+      // Store session token
+      if (data.sessionToken) {
+        setSessionToken(data.sessionToken)
+        sessionStorage.setItem(SESSION_STORAGE_KEY, data.sessionToken)
+      }
+
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to claim session'
+      setError(message)
+      return false
+    }
+  }, [address, signMessageAsync])
+
   // Reset attempts after burning a seed (requires one signature)
   const resetAttempts = useCallback(async (burnTxHash: string): Promise<boolean> => {
     if (!address) {
@@ -220,9 +277,11 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     discardImage,
     discardAll,
     resetAttempts,
+    claimSession,
     setBasePrompt,
     basePrompt,
     fetchAttempts,
+    hasSession: !!sessionToken,
   }
 }
 

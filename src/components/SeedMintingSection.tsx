@@ -196,7 +196,11 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
     basePrompt,
     setBasePrompt,
     resetAttempts,
+    claimSession,
+    hasSession,
   } = geminiState
+
+  const [isClaimingSession, setIsClaimingSession] = useState(false)
 
   // Reset attempts when burn is successful
   useEffect(() => {
@@ -227,6 +231,15 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
 
   const handleGenerate = async () => {
     await generateImage()
+  }
+
+  const handleClaimSession = async () => {
+    setIsClaimingSession(true)
+    try {
+      await claimSession()
+    } finally {
+      setIsClaimingSession(false)
+    }
   }
 
   const handleMintRevealed = async () => {
@@ -295,6 +308,22 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
         <div>
           <h4 className="font-tomorrow text-sm mb-4">Step 2: Generate Images ({attemptsRemaining} attempts left)</h4>
 
+          {/* Claim Session button if user has attempts but no session */}
+          {!hasSession && attemptsRemaining > 0 && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200">
+              <p className="text-sm text-yellow-800 mb-3">
+                Sign once to activate your generation session.
+              </p>
+              <button
+                onClick={handleClaimSession}
+                disabled={isClaimingSession}
+                className="w-full bg-black text-white font-tomorrow text-sm py-3 hover:bg-black/80 transition-colors disabled:opacity-50"
+              >
+                {isClaimingSession ? 'Signing...' : 'Activate Session'}
+              </button>
+            </div>
+          )}
+
           {/* Prompt Input */}
           <div className="mb-4">
             <label className="block font-tomorrow text-[10px] text-black/40 uppercase mb-2">Prompt</label>
@@ -309,7 +338,7 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
 
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || attemptsRemaining <= 0}
+            disabled={isGenerating || attemptsRemaining <= 0 || !hasSession}
             className="w-full bg-lime text-black font-tomorrow text-sm py-4 hover:bg-lime/80 transition-colors disabled:opacity-50 mb-6"
           >
             {isGenerating ? 'Generating...' : `Generate Image (${attemptsRemaining} left)`}
