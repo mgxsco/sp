@@ -54,7 +54,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
 
       // Call Gemini API for image generation (Imagen 3)
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: {
