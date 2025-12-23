@@ -430,20 +430,273 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
 }
 
 // ============ Seed Minting Gallery ============
+interface NFTMetadata {
+  name: string
+  description: string
+  image: string
+  attributes?: { trait_type: string; value: string }[]
+}
+
+interface GalleryNFT {
+  tokenId: number
+  uri: string
+  metadata: NFTMetadata | null
+  creator: string
+  isLoading: boolean
+  error: string | null
+}
+
 function SeedMintingGallery() {
-  const { totalTokens } = useRevealed()
+  const { totalTokens, nextTokenId, contractAddress } = useRevealed()
+  const [nfts, setNfts] = useState<GalleryNFT[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedNft, setSelectedNft] = useState<GalleryNFT | null>(null)
+
+  // Fetch all NFT data
+  useEffect(() => {
+    const fetchNFTs = async () => {
+      if (!nextTokenId || !contractAddress) {
+        setIsLoading(false)
+        return
+      }
+
+      const tokenCount = Number(nextTokenId)
+      if (tokenCount === 0) {
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(true)
+      const nftPromises: Promise<GalleryNFT>[] = []
+
+      for (let i = 0; i < tokenCount; i++) {
+        nftPromises.push(fetchSingleNFT(i, contractAddress))
+      }
+
+      const results = await Promise.all(nftPromises)
+      setNfts(results.reverse()) // Show newest first
+      setIsLoading(false)
+    }
+
+    fetchNFTs()
+  }, [nextTokenId, contractAddress])
+
+  const fetchSingleNFT = async (tokenId: number, contract: string): Promise<GalleryNFT> => {
+    try {
+      // Fetch URI from contract using eth_call
+      const uriData = await fetch(`https://rpc-amoy.polygon.technology`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_call',
+          params: [{
+            to: contract,
+            data: `0x0e89341c${tokenId.toString(16).padStart(64, '0')}` // uri(uint256)
+          }, 'latest'],
+          id: 1
+        })
+      }).then(r => r.json())
+
+      if (!uriData.result || uriData.result === '0x') {
+        return { tokenId, uri: '', metadata: null, creator: '', isLoading: false, error: 'No URI' }
+      }
+
+      // Decode the URI from the response
+      const uri = decodeURIResult(uriData.result)
+
+      // Fetch creator
+      const creatorData = await fetch(`https://rpc-amoy.polygon.technology`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_call',
+          params: [{
+            to: contract,
+            data: `0x510b5158${tokenId.toString(16).padStart(64, '0')}` // tokenCreator(uint256)
+          }, 'latest'],
+          id: 1
+        })
+      }).then(r => r.json())
+
+      const creator = creatorData.result ? `0x${creatorData.result.slice(-40)}` : ''
+
+      // Fetch metadata from IPFS
+      let metadata: NFTMetadata | null = null
+      if (uri) {
+        const metadataUrl = uri.startsWith('ipfs://')
+          ? uri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+          : uri
+
+        try {
+          const metaResponse = await fetch(metadataUrl)
+          if (metaResponse.ok) {
+            metadata = await metaResponse.json()
+            // Convert IPFS image URL
+            if (metadata?.image?.startsWith('ipfs://')) {
+              metadata.image = metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+            }
+          }
+        } catch {
+          // Metadata fetch failed
+        }
+      }
+
+      return { tokenId, uri, metadata, creator, isLoading: false, error: null }
+    } catch (err) {
+      return {
+        tokenId,
+        uri: '',
+        metadata: null,
+        creator: '',
+        isLoading: false,
+        error: err instanceof Error ? err.message : 'Failed to fetch'
+      }
+    }
+  }
+
+  // Decode string result from eth_call
+  const decodeURIResult = (hexResult: string): string => {
+    try {
+      if (!hexResult || hexResult === '0x') return ''
+      // Remove 0x prefix
+      const data = hexResult.slice(2)
+      // First 32 bytes is offset, next 32 is length
+      const lengthHex = data.slice(64, 128)
+      const length = parseInt(lengthHex, 16)
+      // Rest is the string data
+      const stringData = data.slice(128, 128 + length * 2)
+      // Convert hex to string
+      let result = ''
+      for (let i = 0; i < stringData.length; i += 2) {
+        result += String.fromCharCode(parseInt(stringData.slice(i, i + 2), 16))
+      }
+      return result
+    } catch {
+      return ''
+    }
+  }
+
+  const shortenAddress = (addr: string) => {
+    if (!addr) return ''
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  }
 
   return (
     <div className="border border-black/10 p-8 bg-white">
-      <h3 className="font-tomorrow text-lg mb-6">Seed Minting Gallery</h3>
-      <p className="text-black/50 text-sm mb-8">
+      <h3 className="font-tomorrow text-lg mb-2">Seed Minting Gallery</h3>
+      <p className="text-black/50 text-sm mb-6">
         View all revealed NFTs from the Seed Minting collection.
       </p>
 
-      <div className="text-center py-12 text-black/30">
-        <p>Coming soon</p>
-        <p className="text-sm mt-2">Total Revealed: {totalTokens?.toString() || '0'}</p>
+      {/* Stats */}
+      <div className="flex gap-4 mb-8">
+        <div className="text-center p-4 bg-black/5 flex-1">
+          <p className="font-tomorrow text-[10px] text-black/40 uppercase mb-1">Total Revealed</p>
+          <p className="font-tektur text-lg">{totalTokens?.toString() || '0'}</p>
+        </div>
       </div>
+
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="inline-block w-8 h-8 border-2 border-black/20 border-t-black rounded-full animate-spin mb-4"></div>
+          <p className="text-black/40 text-sm">Loading gallery...</p>
+        </div>
+      ) : nfts.length === 0 ? (
+        <div className="text-center py-12 text-black/30">
+          <p>No NFTs revealed yet</p>
+          <p className="text-sm mt-2">Be the first to burn a seed and mint a revealed NFT!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {nfts.map((nft) => (
+            <div
+              key={nft.tokenId}
+              onClick={() => setSelectedNft(nft)}
+              className="border border-black/10 bg-white hover:border-black/30 transition-colors cursor-pointer group"
+            >
+              {nft.metadata?.image ? (
+                <img
+                  src={nft.metadata.image}
+                  alt={nft.metadata.name || `NFT #${nft.tokenId}`}
+                  className="w-full aspect-square object-cover"
+                />
+              ) : (
+                <div className="w-full aspect-square bg-black/5 flex items-center justify-center">
+                  <span className="text-black/20 text-sm">No Image</span>
+                </div>
+              )}
+              <div className="p-3">
+                <p className="font-tomorrow text-sm truncate">
+                  {nft.metadata?.name || `Revealed #${nft.tokenId}`}
+                </p>
+                <p className="text-black/40 text-[10px] font-mono mt-1">
+                  {shortenAddress(nft.creator)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal for selected NFT */}
+      {selectedNft && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedNft(null)}
+        >
+          <div
+            className="bg-white max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {selectedNft.metadata?.image && (
+              <img
+                src={selectedNft.metadata.image}
+                alt={selectedNft.metadata.name || `NFT #${selectedNft.tokenId}`}
+                className="w-full aspect-square object-cover"
+              />
+            )}
+            <div className="p-6">
+              <h4 className="font-tomorrow text-lg mb-2">
+                {selectedNft.metadata?.name || `Revealed #${selectedNft.tokenId}`}
+              </h4>
+              {selectedNft.metadata?.description && (
+                <p className="text-black/60 text-sm mb-4">{selectedNft.metadata.description}</p>
+              )}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-black/40">Token ID</span>
+                  <span className="font-mono">{selectedNft.tokenId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-black/40">Creator</span>
+                  <span className="font-mono">{shortenAddress(selectedNft.creator)}</span>
+                </div>
+              </div>
+              {selectedNft.metadata?.attributes && selectedNft.metadata.attributes.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-black/10">
+                  <p className="font-tomorrow text-[10px] text-black/40 uppercase mb-3">Attributes</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedNft.metadata.attributes.map((attr, i) => (
+                      <div key={i} className="bg-black/5 p-2 text-center">
+                        <p className="text-[10px] text-black/40 uppercase">{attr.trait_type}</p>
+                        <p className="text-sm font-tektur truncate">{attr.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => setSelectedNft(null)}
+                className="w-full mt-6 bg-black text-white font-tomorrow text-sm py-3 hover:bg-black/80 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
