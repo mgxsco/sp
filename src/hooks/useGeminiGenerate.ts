@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
+const STORAGE_KEY = 'gemini_attempts_remaining'
 
 interface GeneratedImage {
   id: string
@@ -27,13 +28,43 @@ export interface UseGeminiGenerateReturn {
 const DEFAULT_PROMPT = 'nanobanana style abstract digital art, vibrant colors, geometric patterns'
 const MAX_ATTEMPTS = 10
 
+// Helper to get stored attempts from localStorage
+function getStoredAttempts(): number {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = parseInt(stored, 10)
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= MAX_ATTEMPTS) {
+        return parsed
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+  return MAX_ATTEMPTS
+}
+
+// Helper to save attempts to localStorage
+function saveAttempts(attempts: number): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, attempts.toString())
+  } catch {
+    // localStorage not available
+  }
+}
+
 export function useGeminiGenerate(): UseGeminiGenerateReturn {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
   const [currentImage, setCurrentImage] = useState<GeneratedImage | null>(null)
-  const [attemptsRemaining, setAttemptsRemaining] = useState(MAX_ATTEMPTS)
+  const [attemptsRemaining, setAttemptsRemaining] = useState(() => getStoredAttempts())
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [basePrompt, setBasePrompt] = useState(DEFAULT_PROMPT)
+
+  // Persist attempts to localStorage when they change
+  useEffect(() => {
+    saveAttempts(attemptsRemaining)
+  }, [attemptsRemaining])
 
   const generateImage = useCallback(async (customPrompt?: string): Promise<string | null> => {
     if (attemptsRemaining <= 0) {
