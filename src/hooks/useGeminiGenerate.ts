@@ -9,7 +9,7 @@ interface GeneratedImage {
   timestamp: number
 }
 
-interface UseGeminiGenerateReturn {
+export interface UseGeminiGenerateReturn {
   generateImage: (customPrompt?: string) => Promise<string | null>
   generatedImages: GeneratedImage[]
   currentImage: GeneratedImage | null

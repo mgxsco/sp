@@ -3,13 +3,16 @@ import { useAccount, useChainId } from 'wagmi'
 import { formatEther } from 'viem'
 import { useSeed } from '../hooks/useSeed'
 import { useRevealed } from '../hooks/useRevealed'
-import { useGeminiGenerate, base64ToFile } from '../hooks/useGeminiGenerate'
+import { useGeminiGenerate, base64ToFile, UseGeminiGenerateReturn } from '../hooks/useGeminiGenerate'
 import { useIPFSUpload } from '../hooks/useIPFSUpload'
 
 type SeedMintingSubTab = 'mint' | 'seed' | 'gallery'
 
 export function SeedMintingSection() {
   const [activeSubTab, setActiveSubTab] = useState<SeedMintingSubTab>('mint')
+
+  // Lift Gemini state to parent so it persists across tab switches
+  const geminiState = useGeminiGenerate()
 
   const subTabs: { id: SeedMintingSubTab; label: string }[] = [
     { id: 'mint', label: 'MINT' },
@@ -38,7 +41,7 @@ export function SeedMintingSection() {
 
       {/* Content */}
       {activeSubTab === 'mint' && <SeedMintSection />}
-      {activeSubTab === 'seed' && <SeedRevealSection />}
+      {activeSubTab === 'seed' && <SeedRevealSection geminiState={geminiState} />}
       {activeSubTab === 'gallery' && <SeedMintingGallery />}
     </div>
   )
@@ -156,7 +159,7 @@ function SeedMintSection() {
 }
 
 // ============ Seed Reveal Section ============
-function SeedRevealSection() {
+function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateReturn }) {
   const { isConnected } = useAccount()
   const chainId = useChainId()
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
@@ -191,7 +194,7 @@ function SeedRevealSection() {
     discardImage,
     basePrompt,
     setBasePrompt,
-  } = useGeminiGenerate()
+  } = geminiState
 
   const { uploadToIPFS, isUploading } = useIPFSUpload()
 
