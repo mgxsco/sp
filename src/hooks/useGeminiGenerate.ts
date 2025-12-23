@@ -52,21 +52,22 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     try {
       const prompt = customPrompt || basePrompt
 
-      // Call Gemini API for image generation (Imagen 3)
+      // Call Gemini API for image generation
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            instances: [{ prompt }],
-            parameters: {
-              sampleCount: 1,
-              aspectRatio: '1:1',
-              safetyFilterLevel: 'block_few',
-              personGeneration: 'dont_allow',
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              responseModalities: ['TEXT', 'IMAGE'],
             },
           }),
         }
@@ -79,11 +80,20 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
 
       const data = await response.json()
 
-      if (!data.predictions || data.predictions.length === 0) {
+      // Find image part in response
+      const candidates = data.candidates || []
+      if (candidates.length === 0) {
         throw new Error('No image generated')
       }
 
-      const imageData = data.predictions[0].bytesBase64Encoded
+      const parts = candidates[0]?.content?.parts || []
+      const imagePart = parts.find((p: { inlineData?: { data: string } }) => p.inlineData?.data)
+
+      if (!imagePart?.inlineData?.data) {
+        throw new Error('No image in response')
+      }
+
+      const imageData = imagePart.inlineData.data
 
       const newImage: GeneratedImage = {
         id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
