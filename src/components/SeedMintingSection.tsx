@@ -6,12 +6,12 @@ import { useRevealed } from '../hooks/useRevealed'
 import { useGeminiGenerate, base64ToFile } from '../hooks/useGeminiGenerate'
 import { useIPFSUpload } from '../hooks/useIPFSUpload'
 
-type ABXDSubTab = 'mint' | 'seed' | 'gallery'
+type SeedMintingSubTab = 'mint' | 'seed' | 'gallery'
 
-export function ABXDSection() {
-  const [activeSubTab, setActiveSubTab] = useState<ABXDSubTab>('mint')
+export function SeedMintingSection() {
+  const [activeSubTab, setActiveSubTab] = useState<SeedMintingSubTab>('mint')
 
-  const subTabs: { id: ABXDSubTab; label: string }[] = [
+  const subTabs: { id: SeedMintingSubTab; label: string }[] = [
     { id: 'mint', label: 'MINT' },
     { id: 'seed', label: 'SEED' },
     { id: 'gallery', label: 'GALLERY' },
@@ -39,7 +39,7 @@ export function ABXDSection() {
       {/* Content */}
       {activeSubTab === 'mint' && <SeedMintSection />}
       {activeSubTab === 'seed' && <SeedRevealSection />}
-      {activeSubTab === 'gallery' && <ABXDGallery />}
+      {activeSubTab === 'gallery' && <SeedMintingGallery />}
     </div>
   )
 }
@@ -79,7 +79,7 @@ function SeedMintSection() {
     <div className="border border-black/10 p-8 bg-white">
       <h3 className="font-tomorrow text-lg mb-6">Mint Seed</h3>
       <p className="text-black/50 text-sm mb-8">
-        Mint a Seed token to participate in the ABXD reveal experience.
+        Mint a Seed token to participate in the reveal experience.
         Burn your seed to generate AI artwork and mint your favorite.
       </p>
 
@@ -410,15 +410,15 @@ function SeedRevealSection() {
   )
 }
 
-// ============ ABXD Gallery ============
-function ABXDGallery() {
+// ============ Seed Minting Gallery ============
+function SeedMintingGallery() {
   const { totalTokens } = useRevealed()
 
   return (
     <div className="border border-black/10 p-8 bg-white">
-      <h3 className="font-tomorrow text-lg mb-6">ABXD Gallery</h3>
+      <h3 className="font-tomorrow text-lg mb-6">Seed Minting Gallery</h3>
       <p className="text-black/50 text-sm mb-8">
-        View all revealed NFTs from the ABXD collection.
+        View all revealed NFTs from the Seed Minting collection.
       </p>
 
       <div className="text-center py-12 text-black/30">

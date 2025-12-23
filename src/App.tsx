@@ -3,7 +3,7 @@ import { Header, Section } from './components/Header'
 import { MintForm } from './components/MintForm'
 import { SoulboundMintForm } from './components/SoulboundMintForm'
 import { Gallery } from './components/Gallery'
-import { ABXDSection } from './components/ABXDSection'
+import { SeedMintingSection } from './components/SeedMintingSection'
 import { AdminPanel } from './components/AdminPanel'
 
 function App() {
@@ -26,9 +26,9 @@ function App() {
           title: 'Gallery',
           description: 'Browse all minted NFTs from the collections.',
         }
-      case 'abxd':
+      case 'seedminting':
         return {
-          title: 'ABXD',
+          title: 'Seed Minting',
           description: 'Mint seeds, burn to reveal AI-generated artwork, and mint your favorites.',
         }
     }
@@ -55,7 +55,7 @@ function App() {
         {activeSection === 'mint' && <MintForm />}
         {activeSection === 'soulbound' && <SoulboundMintForm />}
         {activeSection === 'gallery' && <Gallery />}
-        {activeSection === 'abxd' && <ABXDSection />}
+        {activeSection === 'seedminting' && <SeedMintingSection />}
 
         {/* Admin Panel - Only visible to contract owner on mint sections */}
         {(activeSection === 'mint' || activeSection === 'soulbound') && <AdminPanel />}

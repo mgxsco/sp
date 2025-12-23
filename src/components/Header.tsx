@@ -1,6 +1,6 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 
-export type Section = 'mint' | 'soulbound' | 'gallery' | 'abxd'
+export type Section = 'mint' | 'soulbound' | 'gallery' | 'seedminting'
 
 interface HeaderProps {
   activeSection: Section
@@ -12,7 +12,7 @@ export function Header({ activeSection, onSectionChange }: HeaderProps) {
     { id: 'mint', label: 'MINT' },
     { id: 'soulbound', label: 'SOULBOUND' },
     { id: 'gallery', label: 'GALLERY' },
-    { id: 'abxd', label: 'ABXD' },
+    { id: 'seedminting', label: 'SEEDMINTING' },
   ]
 
   return (
