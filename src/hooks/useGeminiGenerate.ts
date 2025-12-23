@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-const STORAGE_KEY = 'gemini_attempts_remaining'
+import { useAccount, useSignMessage } from 'wagmi'
 
 interface GeneratedImage {
   id: string
@@ -20,60 +18,53 @@ export interface UseGeminiGenerateReturn {
   pickImage: (imageId: string) => GeneratedImage | null
   discardImage: (imageId: string) => void
   discardAll: () => void
-  resetAttempts: (attempts?: number) => void
+  resetAttempts: (burnTxHash: string) => Promise<boolean>
   setBasePrompt: (prompt: string) => void
   basePrompt: string
+  fetchAttempts: () => Promise<void>
 }
 
 const DEFAULT_PROMPT = 'nanobanana style abstract digital art, vibrant colors, geometric patterns'
 const MAX_ATTEMPTS = 10
 
-// Helper to get stored attempts from localStorage
-function getStoredAttempts(): number {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = parseInt(stored, 10)
-      if (!isNaN(parsed) && parsed >= 0 && parsed <= MAX_ATTEMPTS) {
-        return parsed
-      }
-    }
-  } catch {
-    // localStorage not available
-  }
-  return MAX_ATTEMPTS
-}
-
-// Helper to save attempts to localStorage
-function saveAttempts(attempts: number): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, attempts.toString())
-  } catch {
-    // localStorage not available
-  }
-}
-
 export function useGeminiGenerate(): UseGeminiGenerateReturn {
+  const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
+
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
   const [currentImage, setCurrentImage] = useState<GeneratedImage | null>(null)
-  const [attemptsRemaining, setAttemptsRemaining] = useState(() => getStoredAttempts())
+  const [attemptsRemaining, setAttemptsRemaining] = useState(MAX_ATTEMPTS)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [basePrompt, setBasePrompt] = useState(DEFAULT_PROMPT)
 
-  // Persist attempts to localStorage when they change
+  // Fetch attempts from backend when wallet connects
+  const fetchAttempts = useCallback(async () => {
+    if (!address) return
+
+    try {
+      const response = await fetch(`/api/get-attempts?wallet=${address}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAttemptsRemaining(data.attemptsRemaining)
+      }
+    } catch (err) {
+      console.error('Failed to fetch attempts:', err)
+    }
+  }, [address])
+
   useEffect(() => {
-    saveAttempts(attemptsRemaining)
-  }, [attemptsRemaining])
+    fetchAttempts()
+  }, [fetchAttempts])
 
   const generateImage = useCallback(async (customPrompt?: string): Promise<string | null> => {
-    if (attemptsRemaining <= 0) {
-      setError('No attempts remaining')
+    if (!address) {
+      setError('Wallet not connected')
       return null
     }
 
-    if (!GEMINI_API_KEY) {
-      setError('Gemini API key not configured')
+    if (attemptsRemaining <= 0) {
+      setError('No attempts remaining')
       return null
     }
 
@@ -83,60 +74,49 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     try {
       const prompt = customPrompt || basePrompt
 
-      // Call Gemini API for image generation
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: prompt }],
-              },
-            ],
-            generationConfig: {
-              responseModalities: ['IMAGE', 'TEXT'],
-            },
-          }),
-        }
-      )
+      // Create message to sign
+      const messageData = {
+        action: 'generate_image',
+        wallet: address,
+        prompt,
+        timestamp: Date.now(),
+      }
+      const message = JSON.stringify(messageData)
+
+      // Sign the message
+      const signature = await signMessageAsync({ message })
+
+      // Call backend API
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          walletAddress: address,
+          signature,
+          message,
+        }),
+      })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error?.message || `API error: ${response.status}`)
+        throw new Error(errorData.error || `API error: ${response.status}`)
       }
 
       const data = await response.json()
 
-      // Find image part in response
-      const candidates = data.candidates || []
-      if (candidates.length === 0) {
-        throw new Error('No image generated')
-      }
-
-      const parts = candidates[0]?.content?.parts || []
-      const imagePart = parts.find((p: { inlineData?: { data: string } }) => p.inlineData?.data)
-
-      if (!imagePart?.inlineData?.data) {
-        throw new Error('No image in response')
-      }
-
-      const imageData = imagePart.inlineData.data
-
       const newImage: GeneratedImage = {
         id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        imageData: `data:image/png;base64,${imageData}`,
+        imageData: `data:${data.mimeType};base64,${data.imageData}`,
         prompt,
         timestamp: Date.now(),
       }
 
       setGeneratedImages((prev) => [...prev, newImage])
       setCurrentImage(newImage)
-      setAttemptsRemaining((prev) => prev - 1)
+      setAttemptsRemaining(data.attemptsRemaining)
 
       return newImage.imageData
     } catch (err) {
@@ -146,15 +126,14 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     } finally {
       setIsGenerating(false)
     }
-  }, [attemptsRemaining, basePrompt])
+  }, [address, attemptsRemaining, basePrompt, signMessageAsync])
 
   const pickImage = useCallback((imageId: string): GeneratedImage | null => {
     const image = generatedImages.find((img) => img.id === imageId)
     if (image) {
-      // Clear other images, keep only the picked one
       setGeneratedImages([image])
       setCurrentImage(image)
-      setAttemptsRemaining(0) // No more attempts after picking
+      setAttemptsRemaining(0)
     }
     return image || null
   }, [generatedImages])
@@ -171,12 +150,57 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     setCurrentImage(null)
   }, [])
 
-  const resetAttempts = useCallback((attempts: number = MAX_ATTEMPTS) => {
-    setAttemptsRemaining(attempts)
-    setGeneratedImages([])
-    setCurrentImage(null)
-    setError(null)
-  }, [])
+  // Reset attempts after burning a seed
+  const resetAttempts = useCallback(async (burnTxHash: string): Promise<boolean> => {
+    if (!address) {
+      setError('Wallet not connected')
+      return false
+    }
+
+    try {
+      // Create message to sign
+      const messageData = {
+        action: 'reset_attempts',
+        wallet: address,
+        burnTxHash,
+        timestamp: Date.now(),
+      }
+      const message = JSON.stringify(messageData)
+
+      // Sign the message
+      const signature = await signMessageAsync({ message })
+
+      // Call backend API
+      const response = await fetch('/api/reset-attempts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: address,
+          signature,
+          message,
+          burnTxHash,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setAttemptsRemaining(data.attemptsRemaining)
+      setGeneratedImages([])
+      setCurrentImage(null)
+      setError(null)
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to reset attempts'
+      setError(message)
+      return false
+    }
+  }, [address, signMessageAsync])
 
   return {
     generateImage,
@@ -191,6 +215,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     resetAttempts,
     setBasePrompt,
     basePrompt,
+    fetchAttempts,
   }
 }
 

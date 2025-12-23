@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount, useChainId } from 'wagmi'
 import { formatEther } from 'viem'
 import { useSeed } from '../hooks/useSeed'
@@ -164,11 +164,14 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
   const chainId = useChainId()
   const [nftName, setNftName] = useState('')
   const [nftDescription, setNftDescription] = useState('')
+  const [lastBurnHash, setLastBurnHash] = useState<string | null>(null)
 
   const {
     burnSeed,
     isPending: isBurnPending,
     isConfirming: isBurnConfirming,
+    isSuccess: isBurnSuccess,
+    hash: burnHash,
     error: burnError,
     seedBalance,
     canBurn,
@@ -192,7 +195,16 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
     error: generateError,
     basePrompt,
     setBasePrompt,
+    resetAttempts,
   } = geminiState
+
+  // Reset attempts when burn is successful
+  useEffect(() => {
+    if (isBurnSuccess && burnHash && burnHash !== lastBurnHash) {
+      setLastBurnHash(burnHash)
+      resetAttempts(burnHash)
+    }
+  }, [isBurnSuccess, burnHash, lastBurnHash, resetAttempts])
 
   const { uploadToIPFS, isUploading } = useIPFSUpload()
 
