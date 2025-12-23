@@ -1,5 +1,4 @@
 import { Redis } from '@upstash/redis'
-import { verifyMessage } from 'viem'
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
@@ -12,8 +11,7 @@ const MAX_ATTEMPTS = 10
 interface RequestBody {
   prompt: string
   walletAddress: string
-  signature: string
-  message: string
+  sessionToken: string
 }
 
 export const config = {
@@ -31,36 +29,22 @@ export default async function handler(req: Request) {
 
   try {
     const body: RequestBody = await req.json()
-    const { prompt, walletAddress, signature, message } = body
+    const { prompt, walletAddress, sessionToken } = body
 
     // Validate required fields
-    if (!prompt || !walletAddress || !signature || !message) {
+    if (!prompt || !walletAddress || !sessionToken) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    // Verify the signature matches the wallet address
-    const isValid = await verifyMessage({
-      address: walletAddress as `0x${string}`,
-      message,
-      signature: signature as `0x${string}`,
-    })
+    // Verify session token
+    const sessionKey = `session:${sessionToken}`
+    const sessionWallet = await redis.get<string>(sessionKey)
 
-    if (!isValid) {
-      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Check if message is recent (within 5 minutes) to prevent replay attacks
-    const messageData = JSON.parse(message)
-    const timestamp = messageData.timestamp
-    const now = Date.now()
-    if (now - timestamp > 5 * 60 * 1000) {
-      return new Response(JSON.stringify({ error: 'Signature expired' }), {
+    if (!sessionWallet || sessionWallet !== walletAddress.toLowerCase()) {
+      return new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       })

@@ -7,6 +7,14 @@ const redis = new Redis({
 })
 
 const MAX_ATTEMPTS = 10
+const SESSION_TTL = 24 * 60 * 60 // 24 hours in seconds
+
+// Generate a random session token
+function generateSessionToken(): string {
+  const array = new Uint8Array(32)
+  crypto.getRandomValues(array)
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
+}
 
 interface RequestBody {
   walletAddress: string
@@ -78,10 +86,16 @@ export default async function handler(req: Request) {
     const attemptsKey = `attempts:${walletAddress.toLowerCase()}`
     await redis.set(attemptsKey, MAX_ATTEMPTS)
 
+    // Generate session token for this wallet
+    const sessionToken = generateSessionToken()
+    const sessionKey = `session:${sessionToken}`
+    await redis.set(sessionKey, walletAddress.toLowerCase(), { ex: SESSION_TTL })
+
     return new Response(
       JSON.stringify({
         success: true,
         attemptsRemaining: MAX_ATTEMPTS,
+        sessionToken,
       }),
       {
         status: 200,

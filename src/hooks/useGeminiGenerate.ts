@@ -26,6 +26,7 @@ export interface UseGeminiGenerateReturn {
 
 const DEFAULT_PROMPT = 'nanobanana style abstract digital art, vibrant colors, geometric patterns'
 const MAX_ATTEMPTS = 10
+const SESSION_STORAGE_KEY = 'gemini_session_token'
 
 export function useGeminiGenerate(): UseGeminiGenerateReturn {
   const { address } = useAccount()
@@ -37,6 +38,13 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [basePrompt, setBasePrompt] = useState(DEFAULT_PROMPT)
+  const [sessionToken, setSessionToken] = useState<string | null>(() => {
+    // Load session token from sessionStorage on init
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(SESSION_STORAGE_KEY)
+    }
+    return null
+  })
 
   // Fetch attempts from backend when wallet connects
   const fetchAttempts = useCallback(async () => {
@@ -63,6 +71,11 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
       return null
     }
 
+    if (!sessionToken) {
+      setError('No active session. Please burn a seed first.')
+      return null
+    }
+
     if (attemptsRemaining <= 0) {
       setError('No attempts remaining')
       return null
@@ -74,19 +87,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     try {
       const prompt = customPrompt || basePrompt
 
-      // Create message to sign
-      const messageData = {
-        action: 'generate_image',
-        wallet: address,
-        prompt,
-        timestamp: Date.now(),
-      }
-      const message = JSON.stringify(messageData)
-
-      // Sign the message
-      const signature = await signMessageAsync({ message })
-
-      // Call backend API
+      // Call backend API with session token (no signature needed)
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
@@ -95,8 +96,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
         body: JSON.stringify({
           prompt,
           walletAddress: address,
-          signature,
-          message,
+          sessionToken,
         }),
       })
 
@@ -126,7 +126,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     } finally {
       setIsGenerating(false)
     }
-  }, [address, attemptsRemaining, basePrompt, signMessageAsync])
+  }, [address, attemptsRemaining, basePrompt, sessionToken])
 
   const pickImage = useCallback((imageId: string): GeneratedImage | null => {
     const image = generatedImages.find((img) => img.id === imageId)
@@ -150,7 +150,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     setCurrentImage(null)
   }, [])
 
-  // Reset attempts after burning a seed
+  // Reset attempts after burning a seed (requires one signature)
   const resetAttempts = useCallback(async (burnTxHash: string): Promise<boolean> => {
     if (!address) {
       setError('Wallet not connected')
@@ -158,7 +158,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     }
 
     try {
-      // Create message to sign
+      // Create message to sign (only signature needed for this action)
       const messageData = {
         action: 'reset_attempts',
         wallet: address,
@@ -194,6 +194,13 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
       setGeneratedImages([])
       setCurrentImage(null)
       setError(null)
+
+      // Store session token for subsequent generate requests
+      if (data.sessionToken) {
+        setSessionToken(data.sessionToken)
+        sessionStorage.setItem(SESSION_STORAGE_KEY, data.sessionToken)
+      }
+
       return true
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to reset attempts'
