@@ -1,4 +1,9 @@
-import { kv } from '@vercel/kv'
+import { Redis } from '@upstash/redis'
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
 
 const MAX_ATTEMPTS = 10
 
@@ -26,9 +31,9 @@ export default async function handler(req: Request) {
       })
     }
 
-    // Get remaining attempts from KV store
+    // Get remaining attempts from Redis
     const key = `attempts:${walletAddress.toLowerCase()}`
-    const attempts = await kv.get<number>(key)
+    const attempts = await redis.get<number>(key)
 
     return new Response(
       JSON.stringify({

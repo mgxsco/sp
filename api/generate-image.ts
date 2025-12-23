@@ -1,5 +1,10 @@
-import { kv } from '@vercel/kv'
+import { Redis } from '@upstash/redis'
 import { verifyMessage } from 'viem'
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const MAX_ATTEMPTS = 10
@@ -61,9 +66,9 @@ export default async function handler(req: Request) {
       })
     }
 
-    // Get remaining attempts from KV store
+    // Get remaining attempts from Redis
     const key = `attempts:${walletAddress.toLowerCase()}`
-    let attempts = await kv.get<number>(key)
+    let attempts = await redis.get<number>(key)
 
     if (attempts === null) {
       // First time user - they need to burn a seed first
@@ -135,7 +140,7 @@ export default async function handler(req: Request) {
 
     // Decrement attempts and save
     const newAttempts = attempts - 1
-    await kv.set(key, newAttempts)
+    await redis.set(key, newAttempts)
 
     return new Response(
       JSON.stringify({

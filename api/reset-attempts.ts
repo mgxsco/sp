@@ -1,5 +1,10 @@
-import { kv } from '@vercel/kv'
+import { Redis } from '@upstash/redis'
 import { verifyMessage } from 'viem'
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
 
 const MAX_ATTEMPTS = 10
 
@@ -51,7 +56,7 @@ export default async function handler(req: Request) {
 
     // Check if this burn tx has already been used
     const burnKey = `burn:${burnTxHash.toLowerCase()}`
-    const alreadyUsed = await kv.get<boolean>(burnKey)
+    const alreadyUsed = await redis.get<boolean>(burnKey)
 
     if (alreadyUsed) {
       return new Response(JSON.stringify({ error: 'Burn transaction already used' }), {
@@ -67,11 +72,11 @@ export default async function handler(req: Request) {
     // For now, we trust the signature verification
 
     // Mark this burn tx as used
-    await kv.set(burnKey, true)
+    await redis.set(burnKey, true)
 
     // Reset attempts for this wallet
     const attemptsKey = `attempts:${walletAddress.toLowerCase()}`
-    await kv.set(attemptsKey, MAX_ATTEMPTS)
+    await redis.set(attemptsKey, MAX_ATTEMPTS)
 
     return new Response(
       JSON.stringify({
