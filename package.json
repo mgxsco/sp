@@ -7,7 +7,15 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "compile": "hardhat compile",
+    "deploy:sepolia": "hardhat run scripts/deploy-all.ts --network sepolia",
+    "deploy:amoy": "hardhat run scripts/deploy-all.ts --network amoy",
+    "deploy:mainnet": "hardhat run scripts/deploy-all.ts --network mainnet",
+    "deploy:polygon": "hardhat run scripts/deploy-all.ts --network polygon",
+    "deploy:testnets": "./scripts/deploy-multi-chain.sh sepolia amoy",
+    "deploy:mainnets": "./scripts/deploy-multi-chain.sh mainnet polygon",
+    "deploy:all": "./scripts/deploy-multi-chain.sh mainnet polygon sepolia amoy"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.1.2",
@@ -21,15 +29,18 @@
     "wagmi": "^2.5.11"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.19",
+    "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
+    "hardhat": "^2.22.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",

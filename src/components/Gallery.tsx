@@ -7,11 +7,15 @@ import { SOULBOUND_MINT_ERC1155_ABI } from '../contracts/SoulboundNFTContract'
 const NFT_CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
   1: import.meta.env.VITE_CONTRACT_MAINNET as `0x${string}`,
   11155111: import.meta.env.VITE_CONTRACT_SEPOLIA as `0x${string}`,
+  137: import.meta.env.VITE_CONTRACT_POLYGON as `0x${string}`,
+  80002: import.meta.env.VITE_CONTRACT_AMOY as `0x${string}`,
 }
 
 const SOULBOUND_CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
   1: import.meta.env.VITE_SOULBOUND_CONTRACT_MAINNET as `0x${string}`,
-  11155111: import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS as `0x${string}`,
+  11155111: import.meta.env.VITE_SOULBOUND_CONTRACT_SEPOLIA as `0x${string}`,
+  137: import.meta.env.VITE_SOULBOUND_CONTRACT_POLYGON as `0x${string}`,
+  80002: import.meta.env.VITE_SOULBOUND_CONTRACT_AMOY as `0x${string}`,
 }
 
 interface NFTMetadata {

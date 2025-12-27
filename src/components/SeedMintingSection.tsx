@@ -450,10 +450,22 @@ interface GalleryNFT {
 }
 
 function SeedMintingGallery() {
+  const chainId = useChainId()
   const { totalTokens, nextTokenId, contractAddress } = useRevealed()
   const [nfts, setNfts] = useState<GalleryNFT[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedNft, setSelectedNft] = useState<GalleryNFT | null>(null)
+
+  // Get RPC URL based on network
+  const getRpcUrl = (chain: number): string => {
+    switch (chain) {
+      case 1: return 'https://eth.drpc.org'
+      case 11155111: return 'https://rpc.sepolia.org'
+      case 137: return 'https://polygon-rpc.com'
+      case 80002: return 'https://rpc-amoy.polygon.technology'
+      default: return 'https://rpc.sepolia.org'
+    }
+  }
 
   // Fetch all NFT data
   useEffect(() => {
@@ -470,10 +482,11 @@ function SeedMintingGallery() {
       }
 
       setIsLoading(true)
+      const rpcUrl = getRpcUrl(chainId)
       const nftPromises: Promise<GalleryNFT>[] = []
 
       for (let i = 0; i < tokenCount; i++) {
-        nftPromises.push(fetchSingleNFT(i, contractAddress))
+        nftPromises.push(fetchSingleNFT(i, contractAddress, rpcUrl))
       }
 
       const results = await Promise.all(nftPromises)
@@ -482,12 +495,12 @@ function SeedMintingGallery() {
     }
 
     fetchNFTs()
-  }, [nextTokenId, contractAddress])
+  }, [nextTokenId, contractAddress, chainId])
 
-  const fetchSingleNFT = async (tokenId: number, contract: string): Promise<GalleryNFT> => {
+  const fetchSingleNFT = async (tokenId: number, contract: string, rpcUrl: string): Promise<GalleryNFT> => {
     try {
       // Fetch URI from contract using eth_call
-      const uriData = await fetch(`https://rpc-amoy.polygon.technology`, {
+      const uriData = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -509,7 +522,7 @@ function SeedMintingGallery() {
       const uri = decodeURIResult(uriData.result)
 
       // Fetch creator
-      const creatorData = await fetch(`https://rpc-amoy.polygon.technology`, {
+      const creatorData = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
