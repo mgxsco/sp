@@ -1,10 +1,18 @@
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from 'wagmi'
 import { SEED_ERC1155_ABI } from '../contracts/SeedContract'
 
-const CONTRACT_ADDRESS = (import.meta.env.VITE_SEED_CONTRACT_ADDRESS || '') as `0x${string}`
+// Network-specific contract addresses
+const CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
+  1: import.meta.env.VITE_SEED_CONTRACT_MAINNET as `0x${string}`,        // Ethereum Mainnet
+  11155111: import.meta.env.VITE_SEED_CONTRACT_SEPOLIA as `0x${string}`, // Sepolia
+  137: import.meta.env.VITE_SEED_CONTRACT_POLYGON as `0x${string}`,      // Polygon Mainnet
+  80002: import.meta.env.VITE_SEED_CONTRACT_AMOY as `0x${string}`,       // Polygon Amoy
+}
 
 export function useSeed() {
   const { address } = useAccount()
+  const chainId = useChainId()
+  const CONTRACT_ADDRESS = CONTRACT_ADDRESSES[chainId] || '' as `0x${string}`
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract()
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
