@@ -6,7 +6,7 @@ import { useRevealed } from '../hooks/useRevealed'
 import { useGeminiGenerate, base64ToFile, UseGeminiGenerateReturn } from '../hooks/useGeminiGenerate'
 import { useIPFSUpload } from '../hooks/useIPFSUpload'
 
-type SeedMintingSubTab = 'mint' | 'seed' | 'gallery'
+type SeedMintingSubTab = 'mint' | 'seed'
 
 export function SeedMintingSection() {
   const [activeSubTab, setActiveSubTab] = useState<SeedMintingSubTab>('mint')
@@ -17,7 +17,6 @@ export function SeedMintingSection() {
   const subTabs: { id: SeedMintingSubTab; label: string }[] = [
     { id: 'mint', label: 'MINT' },
     { id: 'seed', label: 'SEED' },
-    { id: 'gallery', label: 'GALLERY' },
   ]
 
   return (
@@ -42,7 +41,11 @@ export function SeedMintingSection() {
       {/* Content */}
       {activeSubTab === 'mint' && <SeedMintSection />}
       {activeSubTab === 'seed' && <SeedRevealSection geminiState={geminiState} />}
-      {activeSubTab === 'gallery' && <SeedMintingGallery />}
+
+      {/* Gallery always visible */}
+      <div className="mt-8">
+        <SeedMintingGallery />
+      </div>
     </div>
   )
 }
