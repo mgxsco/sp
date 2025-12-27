@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAccount, useReadContract, useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { PUBLIC_MINT_ERC1155_ABI, DEFAULT_CONTRACT_ADDRESS } from '../contracts/NFTContract'
-import { SOULBOUND_MINT_ERC1155_ABI, DEFAULT_SOULBOUND_CONTRACT_ADDRESS } from '../contracts/SoulboundNFTContract'
+import { PUBLIC_MINT_ERC1155_ABI } from '../contracts/NFTContract'
+import { SOULBOUND_MINT_ERC1155_ABI } from '../contracts/SoulboundNFTContract'
 
-const NFT_CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS) as `0x${string}`
-const SOULBOUND_CONTRACT_ADDRESS = (import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS || DEFAULT_SOULBOUND_CONTRACT_ADDRESS) as `0x${string}`
+// Network-specific contract addresses
+const NFT_CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
+  1: import.meta.env.VITE_CONTRACT_MAINNET as `0x${string}`,
+  11155111: import.meta.env.VITE_CONTRACT_SEPOLIA as `0x${string}`,
+}
+
+const SOULBOUND_CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
+  1: import.meta.env.VITE_SOULBOUND_CONTRACT_MAINNET as `0x${string}`,
+  11155111: import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS as `0x${string}`,
+}
 
 interface NFTMetadata {
   name: string
@@ -31,15 +39,21 @@ export function Gallery() {
   const [selectedNFT, setSelectedNFT] = useState<NFTItem | null>(null)
   const [burningTokenId, setBurningTokenId] = useState<number | null>(null)
 
+  // Get network-specific contract addresses
+  const NFT_CONTRACT_ADDRESS = useMemo(() =>
+    (NFT_CONTRACT_ADDRESSES[chainId] || '') as `0x${string}`, [chainId])
+  const SOULBOUND_CONTRACT_ADDRESS = useMemo(() =>
+    (SOULBOUND_CONTRACT_ADDRESSES[chainId] || '') as `0x${string}`, [chainId])
+
   // Get total tokens from both contracts
   const { data: mintTotalTokens } = useReadContract({
-    address: NFT_CONTRACT_ADDRESS,
+    address: NFT_CONTRACT_ADDRESS || undefined,
     abi: PUBLIC_MINT_ERC1155_ABI,
     functionName: 'totalTokens',
   })
 
   const { data: soulboundTotalTokens } = useReadContract({
-    address: SOULBOUND_CONTRACT_ADDRESS,
+    address: SOULBOUND_CONTRACT_ADDRESS || undefined,
     abi: SOULBOUND_MINT_ERC1155_ABI,
     functionName: 'totalTokens',
   })

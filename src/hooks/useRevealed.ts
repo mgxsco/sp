@@ -1,7 +1,7 @@
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi'
-import { REVEALED_ERC1155_ABI, DEFAULT_REVEALED_CONTRACT_ADDRESS } from '../contracts/RevealedContract'
+import { REVEALED_ERC1155_ABI } from '../contracts/RevealedContract'
 
-const CONTRACT_ADDRESS = (import.meta.env.VITE_REVEALED_CONTRACT_ADDRESS || DEFAULT_REVEALED_CONTRACT_ADDRESS) as `0x${string}`
+const CONTRACT_ADDRESS = (import.meta.env.VITE_REVEALED_CONTRACT_ADDRESS || '') as `0x${string}`
 
 export function useRevealed() {
   const { address } = useAccount()

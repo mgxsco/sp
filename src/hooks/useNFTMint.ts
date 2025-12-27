@@ -1,10 +1,16 @@
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi'
-import { PUBLIC_MINT_ERC1155_ABI, DEFAULT_CONTRACT_ADDRESS } from '../contracts/NFTContract'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from 'wagmi'
+import { PUBLIC_MINT_ERC1155_ABI } from '../contracts/NFTContract'
 
-const CONTRACT_ADDRESS = (import.meta.env.VITE_NFT_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS) as `0x${string}`
+// Network-specific contract addresses
+const CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
+  1: import.meta.env.VITE_CONTRACT_MAINNET as `0x${string}`,      // Ethereum Mainnet
+  11155111: import.meta.env.VITE_CONTRACT_SEPOLIA as `0x${string}`, // Sepolia
+}
 
 export function useNFTMint() {
   const { address } = useAccount()
+  const chainId = useChainId()
+  const CONTRACT_ADDRESS = CONTRACT_ADDRESSES[chainId] || '' as `0x${string}`
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract()
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({

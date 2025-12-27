@@ -1,7 +1,7 @@
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi'
-import { SEED_ERC1155_ABI, DEFAULT_SEED_CONTRACT_ADDRESS } from '../contracts/SeedContract'
+import { SEED_ERC1155_ABI } from '../contracts/SeedContract'
 
-const CONTRACT_ADDRESS = (import.meta.env.VITE_SEED_CONTRACT_ADDRESS || DEFAULT_SEED_CONTRACT_ADDRESS) as `0x${string}`
+const CONTRACT_ADDRESS = (import.meta.env.VITE_SEED_CONTRACT_ADDRESS || '') as `0x${string}`
 
 export function useSeed() {
   const { address } = useAccount()
