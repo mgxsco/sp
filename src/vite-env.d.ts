@@ -5,29 +5,19 @@ interface ImportMetaEnv {
   readonly VITE_WALLET_CONNECT_PROJECT_ID: string
   readonly VITE_WALLETCONNECT_PROJECT_ID: string
 
-  // NFT Contract - network specific
+  // NFT Contract
   readonly VITE_CONTRACT_MAINNET: string
   readonly VITE_CONTRACT_SEPOLIA: string
-  readonly VITE_CONTRACT_POLYGON: string
-  readonly VITE_CONTRACT_AMOY: string
 
-  // Soulbound Contract - network specific
+  // Soulbound Contract
   readonly VITE_SOULBOUND_CONTRACT_MAINNET: string
-  readonly VITE_SOULBOUND_CONTRACT_SEPOLIA: string
-  readonly VITE_SOULBOUND_CONTRACT_POLYGON: string
-  readonly VITE_SOULBOUND_CONTRACT_AMOY: string
+  readonly VITE_SOULBOUND_CONTRACT_ADDRESS: string // Sepolia
 
-  // Seed Contract - network specific
-  readonly VITE_SEED_CONTRACT_MAINNET: string
-  readonly VITE_SEED_CONTRACT_SEPOLIA: string
-  readonly VITE_SEED_CONTRACT_POLYGON: string
-  readonly VITE_SEED_CONTRACT_AMOY: string
+  // Seed Contract
+  readonly VITE_SEED_CONTRACT_ADDRESS: string // Sepolia
 
-  // Revealed Contract - network specific
-  readonly VITE_REVEALED_CONTRACT_MAINNET: string
-  readonly VITE_REVEALED_CONTRACT_SEPOLIA: string
-  readonly VITE_REVEALED_CONTRACT_POLYGON: string
-  readonly VITE_REVEALED_CONTRACT_AMOY: string
+  // Revealed Contract
+  readonly VITE_REVEALED_CONTRACT_ADDRESS: string // Sepolia
 
   // Pinata IPFS
   readonly VITE_PINATA_API_KEY: string

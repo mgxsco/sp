@@ -1,12 +1,12 @@
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from 'wagmi'
 import { REVEALED_ERC1155_ABI } from '../contracts/RevealedContract'
 
-// Network-specific contract addresses
+// Network-specific contract addresses (using existing Vercel env vars)
 const CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
-  1: import.meta.env.VITE_REVEALED_CONTRACT_MAINNET as `0x${string}`,        // Ethereum Mainnet
-  11155111: import.meta.env.VITE_REVEALED_CONTRACT_SEPOLIA as `0x${string}`, // Sepolia
-  137: import.meta.env.VITE_REVEALED_CONTRACT_POLYGON as `0x${string}`,      // Polygon Mainnet
-  80002: import.meta.env.VITE_REVEALED_CONTRACT_AMOY as `0x${string}`,       // Polygon Amoy
+  // 1: Mainnet - add VITE_REVEALED_CONTRACT_MAINNET when deployed
+  11155111: import.meta.env.VITE_REVEALED_CONTRACT_ADDRESS as `0x${string}`, // Sepolia
+  // 137: Polygon - add when deployed
+  // 80002: Amoy - add when deployed
 }
 
 export function useRevealed() {

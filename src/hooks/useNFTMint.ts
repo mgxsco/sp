@@ -1,12 +1,12 @@
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from 'wagmi'
 import { PUBLIC_MINT_ERC1155_ABI } from '../contracts/NFTContract'
 
-// Network-specific contract addresses
+// Network-specific contract addresses (using existing Vercel env vars)
 const CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
   1: import.meta.env.VITE_CONTRACT_MAINNET as `0x${string}`,        // Ethereum Mainnet
   11155111: import.meta.env.VITE_CONTRACT_SEPOLIA as `0x${string}`, // Sepolia
-  137: import.meta.env.VITE_CONTRACT_POLYGON as `0x${string}`,      // Polygon Mainnet
-  80002: import.meta.env.VITE_CONTRACT_AMOY as `0x${string}`,       // Polygon Amoy
+  // Polygon - add VITE_CONTRACT_POLYGON when deployed
+  // Amoy - add VITE_CONTRACT_AMOY when deployed
 }
 
 export function useNFTMint() {
