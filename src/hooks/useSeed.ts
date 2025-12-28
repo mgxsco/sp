@@ -2,11 +2,10 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAcc
 import { SEED_ERC1155_ABI } from '../contracts/SeedContract'
 
 // Network-specific contract addresses (using existing Vercel env vars)
+// Note: _ADDRESS suffix = Mainnet, _SEPOLIA suffix = Sepolia
 const CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
-  // 1: Mainnet - add VITE_SEED_CONTRACT_MAINNET when deployed
-  11155111: import.meta.env.VITE_SEED_CONTRACT_ADDRESS as `0x${string}`, // Sepolia
-  // 137: Polygon - add when deployed
-  // 80002: Amoy - add when deployed
+  1: import.meta.env.VITE_SEED_CONTRACT_ADDRESS as `0x${string}`, // Mainnet
+  // 11155111: add VITE_SEED_CONTRACT_SEPOLIA when deployed
 }
 
 export function useSeed() {

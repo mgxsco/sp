@@ -4,16 +4,15 @@ import { PUBLIC_MINT_ERC1155_ABI } from '../contracts/NFTContract'
 import { SOULBOUND_MINT_ERC1155_ABI } from '../contracts/SoulboundNFTContract'
 
 // Network-specific contract addresses (using existing Vercel env vars)
+// Note: _ADDRESS suffix = Mainnet, _SEPOLIA suffix = Sepolia
 const NFT_CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
   1: import.meta.env.VITE_CONTRACT_MAINNET as `0x${string}`,
   11155111: import.meta.env.VITE_CONTRACT_SEPOLIA as `0x${string}`,
-  // Polygon - add when deployed
 }
 
 const SOULBOUND_CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
-  1: import.meta.env.VITE_SOULBOUND_CONTRACT_MAINNET as `0x${string}`,
-  11155111: import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS as `0x${string}`,
-  // Polygon - add when deployed
+  1: import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS as `0x${string}`,
+  // 11155111: add VITE_SOULBOUND_CONTRACT_SEPOLIA when deployed
 }
 
 interface NFTMetadata {

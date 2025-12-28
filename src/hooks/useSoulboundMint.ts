@@ -2,11 +2,10 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAcc
 import { SOULBOUND_MINT_ERC1155_ABI } from '../contracts/SoulboundNFTContract'
 
 // Network-specific contract addresses (using existing Vercel env vars)
+// Note: _ADDRESS suffix = Mainnet, _SEPOLIA suffix = Sepolia
 const CONTRACT_ADDRESSES: Record<number, `0x${string}` | undefined> = {
-  1: import.meta.env.VITE_SOULBOUND_CONTRACT_MAINNET as `0x${string}`,   // Ethereum Mainnet
-  11155111: import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS as `0x${string}`, // Sepolia
-  // Polygon - add VITE_SOULBOUND_CONTRACT_POLYGON when deployed
-  // Amoy - add VITE_SOULBOUND_CONTRACT_AMOY when deployed
+  1: import.meta.env.VITE_SOULBOUND_CONTRACT_ADDRESS as `0x${string}`, // Mainnet
+  // 11155111: add VITE_SOULBOUND_CONTRACT_SEPOLIA when deployed
 }
 
 export function useSoulboundMint() {
