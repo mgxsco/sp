@@ -28,7 +28,6 @@ export interface UseGeminiGenerateReturn {
 }
 
 const DEFAULT_PROMPT = 'nanobanana style abstract digital art, vibrant colors, geometric patterns'
-const MAX_ATTEMPTS = 10
 const SESSION_STORAGE_KEY = 'gemini_session_token'
 
 export function useGeminiGenerate(): UseGeminiGenerateReturn {

@@ -312,6 +312,15 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
         <div>
           <h4 className="font-tomorrow text-sm mb-4">Step 2: Generate Images ({attemptsRemaining} attempts left)</h4>
 
+          {/* Show message if burn happened but attempts not yet credited */}
+          {!hasBurnedSeed && attemptsRemaining === 0 && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200">
+              <p className="text-sm text-blue-800">
+                Processing your burn... Sign the message to claim your 10 generation attempts.
+              </p>
+            </div>
+          )}
+
           {/* Claim Session button if user has attempts but no session */}
           {!hasSession && attemptsRemaining > 0 && (
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200">
