@@ -1,11 +1,6 @@
 import { Redis } from '@upstash/redis'
 import { verifyMessage } from 'viem'
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-})
-
 const SESSION_TTL = 24 * 60 * 60 // 24 hours in seconds
 
 // Generate a random session token
@@ -33,6 +28,23 @@ export default async function handler(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     })
   }
+
+  // Check Redis env vars
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    console.error('Missing Redis environment variables')
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
+  const redis = new Redis({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+  })
 
   try {
     const body: RequestBody = await req.json()
@@ -90,7 +102,7 @@ export default async function handler(req: Request) {
   } catch (error) {
     console.error('Claim session error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: String(error) }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },

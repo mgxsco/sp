@@ -1,10 +1,5 @@
 import { Redis } from '@upstash/redis'
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-})
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const MAX_ATTEMPTS = 10
 
@@ -26,6 +21,26 @@ export default async function handler(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     })
   }
+
+  // Check env vars
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Redis not configured' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  if (!GEMINI_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Gemini API not configured' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  const redis = new Redis({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+  })
 
   try {
     const body: RequestBody = await req.json()

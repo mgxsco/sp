@@ -1,11 +1,6 @@
 import { Redis } from '@upstash/redis'
 import { verifyMessage } from 'viem'
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-})
-
 const MAX_ATTEMPTS = 10
 const SESSION_TTL = 24 * 60 * 60 // 24 hours in seconds
 
@@ -35,6 +30,19 @@ export default async function handler(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     })
   }
+
+  // Check Redis env vars
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Redis not configured' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  const redis = new Redis({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+  })
 
   try {
     const body: RequestBody = await req.json()

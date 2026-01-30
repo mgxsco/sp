@@ -1,10 +1,5 @@
 import { Redis } from '@upstash/redis'
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-})
-
 const MAX_ATTEMPTS = 10
 
 export const config = {
@@ -19,6 +14,23 @@ export default async function handler(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     })
   }
+
+  // Check Redis env vars
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    console.error('Missing Redis environment variables')
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error', attemptsRemaining: MAX_ATTEMPTS }),
+      {
+        status: 200, // Return 200 with default attempts so UI doesn't break
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
+  const redis = new Redis({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+  })
 
   try {
     const url = new URL(req.url)
@@ -47,7 +59,7 @@ export default async function handler(req: Request) {
   } catch (error) {
     console.error('Get attempts error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: String(error) }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
