@@ -58,10 +58,15 @@ export default async function handler(req: Request) {
     )
   } catch (error) {
     console.error('Get attempts error:', error)
+    // Return graceful fallback so UI doesn't break
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(error) }),
+      JSON.stringify({
+        attemptsRemaining: MAX_ATTEMPTS,
+        error: 'Redis connection failed',
+        details: error instanceof Error ? error.message : String(error)
+      }),
       {
-        status: 500,
+        status: 200, // Return 200 with default attempts
         headers: { 'Content-Type': 'application/json' },
       }
     )

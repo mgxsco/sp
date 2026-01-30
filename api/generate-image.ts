@@ -154,8 +154,13 @@ export default async function handler(req: Request) {
     )
   } catch (error) {
     console.error('Generate image error:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const isRedisError = errorMessage.includes('UPSTASH') || errorMessage.includes('Redis') || errorMessage.includes('fetch failed')
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({
+        error: isRedisError ? 'Redis connection failed' : 'Internal server error',
+        details: errorMessage,
+      }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },

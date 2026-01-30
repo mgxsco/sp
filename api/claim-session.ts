@@ -101,8 +101,14 @@ export default async function handler(req: Request) {
     )
   } catch (error) {
     console.error('Claim session error:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const isRedisError = errorMessage.includes('UPSTASH') || errorMessage.includes('Redis') || errorMessage.includes('fetch')
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(error) }),
+      JSON.stringify({
+        error: isRedisError ? 'Redis connection failed' : 'Internal server error',
+        details: errorMessage,
+        hint: isRedisError ? 'Check KV_REST_API_URL and KV_REST_API_TOKEN in Vercel environment variables' : undefined
+      }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
