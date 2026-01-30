@@ -200,12 +200,12 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
     basePrompt,
     setBasePrompt,
     resetAttempts,
+    claimAttempts,
     claimSession,
     hasSession,
   } = geminiState
 
   const [isClaimingSession, setIsClaimingSession] = useState(false)
-  const [manualBurnHash, setManualBurnHash] = useState('')
   const [isClaimingAttempts, setIsClaimingAttempts] = useState(false)
 
   // Reset attempts when burn is successful
@@ -248,12 +248,11 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
     }
   }
 
-  const handleManualClaimAttempts = async () => {
-    if (!manualBurnHash.trim()) return
+  const handleClaimAttempts = async () => {
+    if (!pendingReveals || pendingReveals <= 0n) return
     setIsClaimingAttempts(true)
     try {
-      await resetAttempts(manualBurnHash.trim())
-      setManualBurnHash('')
+      await claimAttempts(Number(pendingReveals))
     } finally {
       setIsClaimingAttempts(false)
     }
@@ -325,31 +324,19 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
         <div>
           <h4 className="font-tomorrow text-sm mb-4">Step 2: Generate Images ({attemptsRemaining} attempts left)</h4>
 
-          {/* Show claim UI if burn happened but attempts not yet credited */}
+          {/* Claim attempts - user has pending reveal but no attempts yet */}
           {!hasBurnedSeed && attemptsRemaining === 0 && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200">
-              <p className="text-sm text-blue-800 mb-3">
-                Enter your burn transaction hash to claim your 10 generation attempts.
+            <div className="mb-6 p-4 bg-lime/20 border border-lime">
+              <p className="text-sm text-black mb-3">
+                Sign once to claim your 10 generation attempts.
               </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={manualBurnHash}
-                  onChange={(e) => setManualBurnHash(e.target.value)}
-                  placeholder="0x..."
-                  className="flex-1 p-2 border border-blue-200 text-sm font-mono bg-white"
-                />
-                <button
-                  onClick={handleManualClaimAttempts}
-                  disabled={isClaimingAttempts || !manualBurnHash.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white font-tomorrow text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {isClaimingAttempts ? 'Claiming...' : 'Claim'}
-                </button>
-              </div>
-              <p className="text-xs text-blue-600 mt-2">
-                Find your burn tx in your wallet history or block explorer
-              </p>
+              <button
+                onClick={handleClaimAttempts}
+                disabled={isClaimingAttempts}
+                className="w-full bg-lime text-black font-tomorrow text-sm py-3 hover:bg-lime/80 transition-colors disabled:opacity-50"
+              >
+                {isClaimingAttempts ? 'Claiming...' : 'Claim 10 Attempts'}
+              </button>
             </div>
           )}
 

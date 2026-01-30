@@ -20,6 +20,7 @@ export interface UseGeminiGenerateReturn {
   discardImage: (imageId: string) => void
   discardAll: () => void
   resetAttempts: (burnTxHash: string) => Promise<boolean>
+  claimAttempts: (pendingReveals: number) => Promise<boolean>
   claimSession: () => Promise<boolean>
   setBasePrompt: (prompt: string) => void
   basePrompt: string
@@ -209,6 +210,57 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     }
   }, [address, signMessageAsync])
 
+  // Claim attempts when user has pending reveals (seamless - no tx hash needed)
+  const claimAttempts = useCallback(async (pendingReveals: number): Promise<boolean> => {
+    if (!address) {
+      setError('Wallet not connected')
+      return false
+    }
+
+    try {
+      const messageData = {
+        action: 'claim_attempts',
+        wallet: address,
+        pendingReveals,
+        timestamp: Date.now(),
+      }
+      const message = JSON.stringify(messageData)
+      const signature = await signMessageAsync({ message })
+
+      const response = await fetch('/api/claim-attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: address,
+          signature,
+          message,
+          pendingReveals,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setAttemptsRemaining(data.attemptsRemaining)
+      setHasBurnedSeed(true)
+      setError(null)
+
+      if (data.sessionToken) {
+        setSessionToken(data.sessionToken)
+        sessionStorage.setItem(SESSION_STORAGE_KEY, data.sessionToken)
+      }
+
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to claim attempts'
+      setError(message)
+      return false
+    }
+  }, [address, signMessageAsync])
+
   // Reset attempts after burning a seed (requires one signature)
   const resetAttempts = useCallback(async (burnTxHash: string): Promise<boolean> => {
     if (!address) {
@@ -281,6 +333,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     discardImage,
     discardAll,
     resetAttempts,
+    claimAttempts,
     claimSession,
     setBasePrompt,
     basePrompt,
