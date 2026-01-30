@@ -364,16 +364,17 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
               value={basePrompt}
               onChange={(e) => setBasePrompt(e.target.value)}
               placeholder="Enter generation prompt..."
-              className="w-full p-3 border border-black/20 text-sm font-tektur"
+              disabled={isMinting}
+              className="w-full p-3 border border-black/20 text-sm font-tektur disabled:opacity-50 disabled:bg-black/5"
             />
           </div>
 
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || attemptsRemaining <= 0 || !hasSession}
+            disabled={isGenerating || attemptsRemaining <= 0 || !hasSession || isMinting}
             className="w-full bg-lime text-black font-tomorrow text-sm py-4 hover:bg-lime/80 transition-colors disabled:opacity-50 mb-6"
           >
-            {isGenerating ? 'Generating...' : `Generate Image (${attemptsRemaining} left)`}
+            {isMinting ? 'Minting in progress...' : isGenerating ? 'Generating...' : `Generate Image (${attemptsRemaining} left)`}
           </button>
 
           {generateError && (
