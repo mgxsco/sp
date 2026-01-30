@@ -13,6 +13,7 @@ export interface UseGeminiGenerateReturn {
   generatedImages: GeneratedImage[]
   currentImage: GeneratedImage | null
   attemptsRemaining: number
+  hasBurnedSeed: boolean
   isGenerating: boolean
   error: string | null
   pickImage: (imageId: string) => GeneratedImage | null
@@ -36,7 +37,8 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
 
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
   const [currentImage, setCurrentImage] = useState<GeneratedImage | null>(null)
-  const [attemptsRemaining, setAttemptsRemaining] = useState(MAX_ATTEMPTS)
+  const [attemptsRemaining, setAttemptsRemaining] = useState(0)
+  const [hasBurnedSeed, setHasBurnedSeed] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [basePrompt, setBasePrompt] = useState(DEFAULT_PROMPT)
@@ -57,6 +59,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
       if (response.ok) {
         const data = await response.json()
         setAttemptsRemaining(data.attemptsRemaining)
+        setHasBurnedSeed(data.hasBurnedSeed ?? false)
       }
     } catch (err) {
       console.error('Failed to fetch attempts:', err)
@@ -248,6 +251,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
 
       const data = await response.json()
       setAttemptsRemaining(data.attemptsRemaining)
+      setHasBurnedSeed(true)
       setGeneratedImages([])
       setCurrentImage(null)
       setError(null)
@@ -271,6 +275,7 @@ export function useGeminiGenerate(): UseGeminiGenerateReturn {
     generatedImages,
     currentImage,
     attemptsRemaining,
+    hasBurnedSeed,
     isGenerating,
     error,
     pickImage,

@@ -19,9 +19,9 @@ export default async function handler(req: Request) {
   if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
     console.error('Missing Redis environment variables')
     return new Response(
-      JSON.stringify({ error: 'Server configuration error', attemptsRemaining: MAX_ATTEMPTS }),
+      JSON.stringify({ error: 'Server configuration error', attemptsRemaining: 0, hasBurnedSeed: false }),
       {
-        status: 200, // Return 200 with default attempts so UI doesn't break
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
       }
     )
@@ -47,9 +47,15 @@ export default async function handler(req: Request) {
     const key = `attempts:${walletAddress.toLowerCase()}`
     const attempts = await redis.get<number>(key)
 
+    // null means user has never burned a seed
+    // 0 means user has used all attempts
+    const attemptsRemaining = attempts ?? 0
+    const hasBurnedSeed = attempts !== null
+
     return new Response(
       JSON.stringify({
-        attemptsRemaining: attempts ?? MAX_ATTEMPTS,
+        attemptsRemaining,
+        hasBurnedSeed,
       }),
       {
         status: 200,
@@ -61,12 +67,13 @@ export default async function handler(req: Request) {
     // Return graceful fallback so UI doesn't break
     return new Response(
       JSON.stringify({
-        attemptsRemaining: MAX_ATTEMPTS,
+        attemptsRemaining: 0,
+        hasBurnedSeed: false,
         error: 'Redis connection failed',
         details: error instanceof Error ? error.message : String(error)
       }),
       {
-        status: 200, // Return 200 with default attempts
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
       }
     )

@@ -194,6 +194,7 @@ function SeedRevealSection({ geminiState }: { geminiState: UseGeminiGenerateRetu
     generateImage,
     currentImage,
     attemptsRemaining,
+    hasBurnedSeed,
     isGenerating,
     error: generateError,
     basePrompt,
